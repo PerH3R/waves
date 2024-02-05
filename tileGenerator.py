@@ -50,8 +50,8 @@ def separate_grid(filename, tileset):
     color_mask *= 255
 
     # Save mask to file to inspect
-    # os.makedirs("./masks", exist_ok=True)
-    # cv.imwrite("./masks/{f}_mask.png".format("f=filename"), color_mask)
+    os.makedirs("./masks", exist_ok=True)
+    cv.imwrite("./masks/{f}_mask.png".format(f=filename), color_mask)
 
     # Detect contours
     contours, hierarchy = cv.findContours(image=color_mask, mode=cv.RETR_TREE, method=cv.CHAIN_APPROX_NONE)
@@ -89,8 +89,10 @@ def separate_grid(filename, tileset):
 
 def main():
     #load tileset
-    filename = sys.argv[1]
-    tileset = load_tileset(filename)
+    filename_path = sys.argv[1]
+    tileset = load_tileset(filename_path)
+    filename = os.path.basename(filename_path).split(".")[0]
+    print("Filename:" , filename)
 
     separate_grid(filename, tileset)
 

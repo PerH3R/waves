@@ -1,4 +1,8 @@
+# File extensions
 *.png
 *.PNG
+
+# Folders
 tilesets
-LADX_tiles
+*_tiles
+masks
