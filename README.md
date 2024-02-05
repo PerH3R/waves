@@ -6,5 +6,5 @@ tile loader:
   - auto detect adjacencies (based on colour and/or already neighbouring tiles if map)
 
 iets wat tiles wave collapsed
-  -volledig autonoom
-  -seeded tiles/landmarks/paths
+  - volledig autonoom
+  - seeded tiles/landmarks/paths
