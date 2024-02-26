@@ -30,7 +30,7 @@ def guess_gridsize():
     pass
     # return tileSizePx, gridSizePx
 
-# adds a tile to a list. If an accompanyin hashset is passed it doesn't add duplicates
+# adds a tile to a list. If an accompanying hashset is passed it doesn't add duplicates
 def add_tile(tile, tilelist, hashset=None):
     if hashset is None:
         tilelist.append(tile)
@@ -61,8 +61,16 @@ def write_tiles(file_dir, tilelist):
 # The grid also needs to go around the border of the whole image.
 # We use the top left pixel to detect the color of the mask.
 def separate_grid(filename, tileset):
-    # Detect grid color
+    # Detect grid color. Legacy: use the pixel at (0,0) to determine the grid color.
     gridcolor = tileset[0,0]
+
+    # # Detect grid color. Modern: use the most-occurring color to determine the grid color.
+    # flattened_tileset = tileset.reshape(-1, 3)
+
+    # unique_color, counts = np.unique(flattened_tileset, axis=0, return_counts=True)
+    # max_count_index = np.argmax(counts)
+
+    # gridcolor = unique_color[max_count_index]
 
     # Create the mask.
     mask = np.all(tileset == gridcolor, axis=-1)
@@ -94,7 +102,6 @@ def separate_grid(filename, tileset):
     tiles_hash = set()
 
     # For all contours, cut out tile
-    imgname = 0
     for c in contours:
         maxX, maxY = -1, -1
         minX = tileset.shape[:2][1]
