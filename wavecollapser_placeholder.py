@@ -3,6 +3,10 @@ import cv2 as cv
 import json
 import copy
 
+# tilesize
+tileXsize = 0
+tileYsize = 0
+
 # Directions
 NORTH = 0
 EAST  = 1
@@ -15,6 +19,7 @@ Ysize = 25
 
 world = []
 all_tiles = []
+all_tiles_gray = []
 
 class Tile:
     def __init__(self, x, y):
@@ -25,14 +30,19 @@ class Tile:
     entropy = len(possibilities)
 
 
+
+
 # creates framework for collapsing
-def create_world(X=Xsize, Y=Ysize):
+def create_new_world(X=Xsize, Y=Ysize):
     for row in range(Y):
         world.append([])
         for column in range(X):
             world[0].append(Tile())
             
     pass
+
+
+                
 
 
 def load_tile_imgs(foldername):

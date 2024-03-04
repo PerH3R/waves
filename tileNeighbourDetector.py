@@ -3,6 +3,8 @@ import numpy as np
 import os
 import sys
 np.zeroes = np.zeros
+from copy import deepcopy
+
 
 # todo -> contouring worldmap af, area bij area kopies maken met nummers gematched aan tiles om vervolgens burenlijsten van te kunnen maken
 
@@ -19,9 +21,7 @@ np.zeroes = np.zeros
     # possibilities = np.zeroes(num_tiles)
 
 num_tiles = 1
-tile_possibilities = [None]*num_tiles # Tile
-for i in tile_possibilities:
-    i = [set(),set(),set(),set()] #urdl
+
 
 #loads world png
 def load_world(filename):
@@ -37,7 +37,7 @@ def load_tiles(foldername):
     
 # uses contours to extract the different areas of an overworld file
 # returns seperate sections of the world
-def split_sections(world):
+def split_sections(world, size):
     # Detect grid color. Legacy: use the pixel at (0,0) to determine the grid color.
     gridcolor = world[0,0]
 
@@ -89,60 +89,63 @@ def split_sections(world):
                 minY = coord[1]
 
         box_image = world[minY : maxY+1, minX: maxX+1]
-        world_sections.append(box_image)
+
+        if (box_image.shape[0] % size == 0 and box_image.shape[0] >= size*4) and (box_image.shape[1] % size == 0 and box_image.shape[1] >= size*4):
+            world_sections.append(box_image)
     
     return world_sections
 
 
-# TODO
-#gets a contour and returns a representation as an 2d-array
+#gets a (subsection of) the world and returns the representation of the tiles as ids as an 2d-array
 def build_section_ids(world_section, gray_tileset, size):
-    if (world_section.shape[0] % size != 0 and world_section.shape[0] <= size*2) or (world_section.shape[1] % size != 0 and world_section.shape[1] <= size*2):
-        return
-    world_section_gray = cv.cvtColor(world_section, cv.COLOR_BGR2GRAY)
-    # For each tile, we match in the world (section).
+    # Create an array for the tile ids we find. Initialize on -1 for tiles we did not find.
+    section_numbered = np.full((int(world_section.shape[0]/size), int(world_section.shape[1]/size)), -1)    
+    print(section_numbered.shape)
+
+    # For each tile, we match it in the world (section).
     for id, tile in gray_tileset.items():
-        # print(id)
-        res = cv.matchTemplate(world_section_gray, tile, cv.TM_CCOEFF_NORMED)
-        threshold = 0.8
-        # print(res)
-        loc = np.where(res >= threshold)
-        # print(loc)
+        # os.makedirs("matches/{id}/".format(id=id), exist_ok=True)
+        # Create a copy to draw the match on
+        # world_section_copy = deepcopy(world_section)
+        res = cv.matchTemplate(world_section, tile, cv.TM_SQDIFF_NORMED)
+        threshold = 0.01
+        w, h = tile.shape[:2]
+        loc = np.where(res <= threshold)
         for m in zip(*loc[::-1]):
-            # print(m)
-            pass
+            # only take into account matches coinciding with stride length
+            if m[0] % size == 0 and m[1] % size == 0:
+                # print(id)
+                # print(m)
+                # print(m[0]/size, m[1]/size)
+                # cv.rectangle(world_section_copy, m, (m[0]+w, m[1]+h), (0,0,255), 1)
+                # cv.imwrite("matches/{id}/{id}-match.png".format(id=id), world_section_copy)
+                section_numbered[int(m[1]/size)][int(m[0]/size)] = id
 
-    pass
+    return section_numbered
 
+def add_sect_to_dict(section_numbered, neighbourdict):
 
-
-        
-def analyze_old_world_area(area_list):
-    if tileXsize == 0 or tileYsize == 0:
-        raise ValueError("tilesize inccorect x={} y={}".format(tileXsize, tileYsize))
-
-    for area in area_list:
-        for row in range(0,area.size[0], tileXsize):
-            for col in range(0,area.shape[1], tileXsize):
-                # what is self
-                selfTile = tile_data[area[row][col]]
-
-                if row-1 > 0:
-                    # add area[row-1][col] (up)
-                    # possibilities[selfTile][0].add(area[row-1][col])
-                    pass
-                if col+1 < area.size[1]:
-                    # add area[row][col-1] (right)
-                    # possibilities[selfTile][0].add(area[row][col+1])
-                    pass
-                if row+1 < area.size[0]:
-                    # add area[row-1][col] (down)
-                    # possibilities[selfTile][0].add(area[row+1][col])
-                    pass
-                if col-1 > 0:
-                    # add area[row][col-1] (left)
-                    # possibilities[selfTile][0].add(area[row][col-1])
-                    pass
+    for row in range(section_numbered.shape[0]):
+        for col in range(section_numbered.shape[1]):
+            selfTile = str(section_numbered[row][col])
+            if selfTile not in neighbourdict.keys():
+                neighbourdict[selfTile] = [set(),set(),set(),set()] #udlr?
+            if row-1 > 0: # if above is in bounds
+                # add area[row-1][col] (up)
+                neighbourdict[selfTile][0].add(section_numbered[row-1][col])
+                # pass
+            if col+1 < section_numbered.shape[1]:
+                # add area[row][col-1] (right)
+                neighbourdict[selfTile][3].add(section_numbered[row][col+1])
+                # pass
+            if row+1 < section_numbered.shape[0]:
+                # add area[row-1][col] (down)
+                neighbourdict[selfTile][1].add(section_numbered[row+1][col])
+                # pass
+            if col-1 > 0:
+                # add area[row][col-1] (left)
+                neighbourdict[selfTile][2].add(section_numbered[row][col-1])
+                # pass
                 
                 
 
@@ -156,12 +159,29 @@ def main():
 
     gray_tileset = {k: cv.cvtColor(t, cv.COLOR_BGR2GRAY) for k, t in tileset.items()}
 
+    neighbourdict = {} # Tile
+    # for i in neighbourdict:
+    #     i = [set(),set(),set(),set()] #urdl
+
     # filename = os.path.basename(filename_path).split(".")[0]
     # print("Filename:" , filename)
 
-    world_sections = split_sections(world)    
+    world_sections = split_sections(world, size)
+    sec = 0
+    os.makedirs("world_sections_{w}/".format(w=worldname), exist_ok=True)
+    for s in world_sections:
+        cv.imwrite("world_sections_{w}/section_{sec}.png".format(w=worldname, sec=sec),s)
+        sec += 1
+
+    neighbourdict = {}
+
     for section in world_sections:
-        build_section_ids(section, gray_tileset, size)
+        section_numbered = build_section_ids(section, tileset, size)
+        add_sect_to_dict(section_numbered, neighbourdict)
+
+    print(neighbourdict)
+
+    print(neighbourdict["127"])
 
     
 
