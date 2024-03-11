@@ -2,8 +2,10 @@ import cv2 as cv
 import numpy as np
 import os
 import sys
-np.zeroes = np.zeros
+np.zeroes = np.zeros # We like being British
 from copy import deepcopy
+from tqdm import tqdm
+import json
 
 
 # todo -> contouring worldmap af, area bij area kopies maken met nummers gematched aan tiles om vervolgens burenlijsten van te kunnen maken
@@ -97,13 +99,12 @@ def split_sections(world, size):
 
 
 #gets a (subsection of) the world and returns the representation of the tiles as ids as an 2d-array
-def build_section_ids(world_section, gray_tileset, size):
+def build_section_ids(world_section, tileset, size):
     # Create an array for the tile ids we find. Initialize on -1 for tiles we did not find.
     section_numbered = np.full((int(world_section.shape[0]/size), int(world_section.shape[1]/size)), -1)    
-    print(section_numbered.shape)
 
     # For each tile, we match it in the world (section).
-    for id, tile in gray_tileset.items():
+    for id, tile in tileset.items():
         # os.makedirs("matches/{id}/".format(id=id), exist_ok=True)
         # Create a copy to draw the match on
         # world_section_copy = deepcopy(world_section)
@@ -127,25 +128,28 @@ def add_sect_to_dict(section_numbered, neighbourdict):
 
     for row in range(section_numbered.shape[0]):
         for col in range(section_numbered.shape[1]):
+            # For now, skip tiles with ID -1. TODO: ask user to fill in an ID while
+            # showing the tile and/or word Section in order, so the user can manually
+            # add missing tile IDs, for example for flowing water, etc.
+            if section_numbered[row][col] == -1:
+                continue
             selfTile = str(section_numbered[row][col])
             if selfTile not in neighbourdict.keys():
-                neighbourdict[selfTile] = [set(),set(),set(),set()] #udlr?
-            if row-1 > 0: # if above is in bounds
+                neighbourdict[selfTile] = {}
+                neighbourdict[selfTile]["up"], neighbourdict[selfTile]["down"], neighbourdict[selfTile]["left"], neighbourdict[selfTile]["right"] = set(), set(), set(), set()
+            if row-1 > 0 and section_numbered[row-1][col] != -1: # if above is in bounds
                 # add area[row-1][col] (up)
-                neighbourdict[selfTile][0].add(section_numbered[row-1][col])
-                # pass
-            if col+1 < section_numbered.shape[1]:
+                neighbourdict[selfTile]["up"].add(str(section_numbered[row-1][col]))
+            if col+1 < section_numbered.shape[1] and section_numbered[row][col+1] != -1:
                 # add area[row][col-1] (right)
-                neighbourdict[selfTile][3].add(section_numbered[row][col+1])
-                # pass
-            if row+1 < section_numbered.shape[0]:
+                neighbourdict[selfTile]["right"].add(str(section_numbered[row][col+1]))
+            if row+1 < section_numbered.shape[0] and section_numbered[row+1][col] != -1:
                 # add area[row-1][col] (down)
-                neighbourdict[selfTile][1].add(section_numbered[row+1][col])
-                # pass
-            if col-1 > 0:
+                neighbourdict[selfTile]["down"].add(str(section_numbered[row+1][col]))
+            if col-1 > 0 and section_numbered[row][col-1] != -1:
                 # add area[row][col-1] (left)
-                neighbourdict[selfTile][2].add(section_numbered[row][col-1])
-                # pass
+                neighbourdict[selfTile]["left"].add(str(section_numbered[row][col-1]))
+
                 
                 
 
@@ -157,14 +161,7 @@ def main():
     tileset, size = load_tiles(worldname + "_tiles/")
     world = load_world("worlds/" + worldname + "_world.png")
 
-    gray_tileset = {k: cv.cvtColor(t, cv.COLOR_BGR2GRAY) for k, t in tileset.items()}
-
     neighbourdict = {} # Tile
-    # for i in neighbourdict:
-    #     i = [set(),set(),set(),set()] #urdl
-
-    # filename = os.path.basename(filename_path).split(".")[0]
-    # print("Filename:" , filename)
 
     world_sections = split_sections(world, size)
     sec = 0
@@ -175,18 +172,21 @@ def main():
 
     neighbourdict = {}
 
-    for section in world_sections:
+    print("Matching tiles in each world section...")
+    for section in tqdm(world_sections):
         section_numbered = build_section_ids(section, tileset, size)
         add_sect_to_dict(section_numbered, neighbourdict)
-
-    print(neighbourdict)
-
-    print(neighbourdict["127"])
+    #convert sets to lists for json dumping
+    for tile in neighbourdict.keys():
+        for direction in neighbourdict[tile].keys():
+            neighbourdict[tile][direction] = list(neighbourdict[tile][direction])
+    with open("{w}_neighbors.json".format(w=worldname), "w") as f:
+        json.dump(neighbourdict, f, indent=4)
 
     
 
 if __name__=="__main__": 
-    main() 
+    main()
 
 # result = cv.matchTemplate(image, template, cv2.TM_CCOEFF_NORMED)
 # (yCoords, xCoords) = np.where(result >= args["threshold"])
