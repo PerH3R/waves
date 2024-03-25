@@ -310,6 +310,8 @@ Er zijn tegels die geen buren kunnen hebben aan een zijde. Wanneer die als eerst
 geplaatst worden, loopt het geheel vast als die niet aan de rand van het bord staan,
 omdat er een kant is waar geen enkele mogelijke buur is.
 
+Fixen dat de wereld de juiste PNG resolutie krijgt bij output.
+
 Soms duurt genereren heel erg lang, misschien door moeilijke tegels.
 Misschien een soort stop-moment inbouwen?
 
@@ -317,6 +319,8 @@ Water fixen: tegels die niet in de wereld voorkomen wel alloceren zodat die gevo
 worden, waaronder water.
 
 Gewichten zodat we niet 3 telefoonhuisjes krijgen
+
+Animatie van genereren, met live entropie updates.
 
 Misschien ook nog als extensie: kijken tussen world-sections, maar niet altijd.
 Alleen als het in dezelfde type "biome" is
