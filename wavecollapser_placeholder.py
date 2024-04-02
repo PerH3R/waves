@@ -6,12 +6,6 @@ import numpy as np
 from random import choice
 from PIL import Image
 
-# TODO for increasing the scope of the project:
-# 1. Add tile weighs, maybe even based on occurrence in the "real world".
-# 2. Prevent tiles that cannot have neighbors in a certain direction to be placed
-#    on a spot where neighbors need to be filled in in that direction.
-
-
 # tilesize
 tileXsize = 16
 tileYsize = 16
@@ -21,11 +15,6 @@ NORTH = 0
 EAST  = 1
 SOUTH = 2
 WEST  = 3
-
-# World Size in tiles
-xSize = 25
-ySize = 25
-
 
 all_tiles = []
 all_tiles_gray = []
@@ -94,9 +83,18 @@ class World:
     # the possibilities of the other adjacent neighbors, as well
     # as looking in the dictionary of possibilities.
     def collapse(self):
+        #reset entropy values, needed in case of undo's
+        for x in range(self.xSize):
+            for y in range(self.ySize):
+                if self.world[x][y].get_tile_id() == "-1":
+                    self.world[x][y].set_possibilities(list(self.neighbor_rules.keys()))
+                    
+
+        #calculate new entropy values
         for x in range(self.xSize):
             for y in range(self.ySize):
                 if self.world[x][y].get_tile_id() != "-1":
+                    self.world[x][y].set_possibilities(set())
                     if y-1 >= 0 : # if above is in bounds
                         # up
                         self.world[x][y-1].set_possibilities(self.world[x][y-1].get_possibilities() & 
@@ -116,7 +114,7 @@ class World:
                         
 
     def create_image(self, tile_imgs):
-        new_world_map = Image.new('RGB', (ySize*tileYsize, xSize*tileXsize))
+        new_world_map = Image.new('RGB', (self.xSize*tileYsize, self.ySize*tileXsize))
         for x in range(self.xSize):
             for y in range(self.ySize):
                 if self.world[x][y].get_tile_id() != '-1':
@@ -134,9 +132,9 @@ class World:
     def reset_possibilities(self):
         for x in range(self.xSize):
             for y in range(self.ySize):
-                if self.world[x][y].get_tile_id() != "-1":
-                    self.world[x][y].set_possibilities(list(self.neighbor_rules.keys()))
-                    self.world[x][y].update_entropy()
+                # if self.world[x][y].get_tile_id() != "-1":
+                self.world[x][y].set_possibilities(list(self.neighbor_rules.keys()))
+                # self.world[x][y].update_entropy()
                     
                 
     # Get the possibilities of the neighbor in a certain direction.
@@ -180,6 +178,22 @@ class World:
                 print(self.world[x][y].get_entropy(), end="" + '\t')
             print("\n", end="")
 
+    #checks if all tiles in world are "-1" and thus not set
+    def is_empty(self):
+        for x in range(self.xSize):
+            for y in range(self.ySize):
+                if self.world[x][y].get_tile_id() != "-1":
+                    return False                
+        return True
+    
+    #returns the tile object at x,y
+    def get_tile(self):     
+        return self.world[x][y]
+    
+    #sets the tile at x,y to id. don't forget to collapse
+    def set_tile(self, x, y, id):
+        self.world[x][y].set_tile_id(id)
+
 
 
 
@@ -206,7 +220,7 @@ class Tile:
     
     # Set the possibilities of the tile.
     def set_possibilities(self, new_possibilities):
-        self.possibilities = copy.deepcopy(new_possibilities)
+        self.possibilities = set(copy.deepcopy(new_possibilities))
         self.update_entropy()
     
     # Returns the type id of the tile.
@@ -216,9 +230,6 @@ class Tile:
     # Set the type id of the tile.
     def set_tile_id(self, id):
         self.tile_id = id
-        if id != '-1':
-            self.set_possibilities(set())
-            self.update_entropy()
 
     # Returns the position of the tile in the world.
     def get_position(self):
@@ -237,45 +248,61 @@ def load_neighbors_json(filename):
         tile_neighbors = json.load(file)
         return tile_neighbors
 
-            
 
 def generate(world):
     # Main generating loop
     while(True):
+        # If stuck, return and try another config
         if world.stuck_check():
             print("We are stuck!")
             return None
+        # List of tiles we can choose from with lowest entropy
         candidate_tiles = world.find_candidate_tiles()
     
         while(True):
             if world == None:
                 print("Hard error bro")
+            # When done, propagate world upwards out of recursion
             if world.done_check():
                 return world
+            # If there are no candidate tiles left, we are stuck
             if (len(candidate_tiles) == 0):
                 print("No more candidate tiles in this branch, going back")
                 return None
+            # Keep trying tiles and removing them, so if it doesn't work out,
+            # we try another
             chosen_tile = choice(list(candidate_tiles))
             candidate_tiles.remove(chosen_tile)
 
+            # Get all possible tile IDs that can be placed on selected tile
             candidate_tile_ids = chosen_tile.get_possibilities()
+
             if len(candidate_tile_ids) > 0:
+                # Once again, chose a tile ID and remove it so we do not try
+                # it again if it doesn't work out
                 chosen_tile_id = choice(list(candidate_tile_ids))
                 candidate_tile_ids.remove(chosen_tile_id)
 
+                # Set tile ID
                 chosen_tile.set_tile_id(chosen_tile_id)
                 world.collapse()
                 
-                # print("Current world")
-                # world.debug_terminal_print()
-                # print("Current entropy")
-                # world.debug_terminal_print_entropy()
-                # print()
+                print("Current world")
+                world.debug_terminal_print()
+                print("Current entropy")
+                world.debug_terminal_print_entropy()
+                print()
 
+                # Recursion: try to generate further with the current world
                 done_world = generate(copy.deepcopy(world))
+                # Propagate world out of recursion if we are done
                 if done_world != None and done_world.done_check():
                     print("We are done")
                     world = done_world
+                
+                # Undo tile
+                chosen_tile.set_tile_id("-1")
+                world.collapse()
             else:
                 print("No more ids available for candidate tile, choosing another")
                 
@@ -306,12 +333,6 @@ if __name__=="__main__":
 
 """
 TODO:
-Er zijn tegels die geen buren kunnen hebben aan een zijde. Wanneer die als eerste
-geplaatst worden, loopt het geheel vast als die niet aan de rand van het bord staan,
-omdat er een kant is waar geen enkele mogelijke buur is.
-
-Fixen dat de wereld de juiste PNG resolutie krijgt bij output.
-
 Soms duurt genereren heel erg lang, misschien door moeilijke tegels.
 Misschien een soort stop-moment inbouwen?
 
@@ -323,5 +344,5 @@ Gewichten zodat we niet 3 telefoonhuisjes krijgen
 Animatie van genereren, met live entropie updates.
 
 Misschien ook nog als extensie: kijken tussen world-sections, maar niet altijd.
-Alleen als het in dezelfde type "biome" is
+Alleen als het in dezelfde type "biome" is?
 """
