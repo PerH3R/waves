@@ -101,7 +101,7 @@ def split_sections(world, size):
 #gets a (subsection of) the world and returns the representation of the tiles as ids as an 2d-array
 def build_section_ids(world_section, tileset, size):
     # Create an array for the tile ids we find. Initialize on -1 for tiles we did not find.
-    section_numbered = np.full((int(world_section.shape[0]/size), int(world_section.shape[1]/size)), -1)    
+    section_numbered = np.full((int(world_section.shape[0]/size), int(world_section.shape[1]/size)), -1)
 
     # For each tile, we match it in the world (section).
     for id, tile in tileset.items():
@@ -122,6 +122,24 @@ def build_section_ids(world_section, tileset, size):
                 # cv.imwrite("matches/{id}/{id}-match.png".format(id=id), world_section_copy)
                 section_numbered[int(m[1]/size)][int(m[0]/size)] = id
 
+    unknown_imgs = []
+    for y in range(section_numbered.shape[0]):
+        for x in range(section_numbered.shape[0]):
+            if section_numbered[y][x] == -1:
+                unknown_imgs.append(world_section[y:y+16, x:x+16])
+    # print(unknown_imgs)
+    i = 0
+    same_img_idx = []
+    # while i < len(unknown_imgs)-1:        
+    #     for j in range(len(unknown_imgs[i+1:])):
+    #         if unknown_imgs[i] == unknown_imgs[j]:
+    #             same_img_idx.append(j)
+    #             pass
+    # for idx in same_img_idx.reverse():
+    #     unknown_imgs[i]
+    for img in unknown_imgs:
+        cv.imshow('Missing image', img)
+        cv.waitKey(1)
     return section_numbered
 
 def add_sect_to_dict(section_numbered, neighbourdict):
@@ -150,8 +168,6 @@ def add_sect_to_dict(section_numbered, neighbourdict):
                 # add area[row][col-1] (left)
                 neighbourdict[selfTile]["left"].add(str(section_numbered[row][col-1]))
 
-                
-                
 
 def main():
     #load tileset. The user gives the name of the world (LADX, AlttP)
@@ -182,6 +198,8 @@ def main():
             neighbourdict[tile][direction] = list(neighbourdict[tile][direction])
     with open("{w}_neighbors.json".format(w=worldname), "w") as f:
         json.dump(neighbourdict, f, indent=4)
+
+
 
     
 

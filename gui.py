@@ -12,8 +12,8 @@ class Window(QMainWindow):
         # Window size
         self.left = 0
         self.top = 0
-        self.width = 400
-        self.height = 300
+        self.width = 600
+        self.height = 400
         self.setMinimumSize(self.width, self.height)
 
         # Set widget with tabs
@@ -47,7 +47,7 @@ class Tabs(QWidget):
         self.tab1.layout.addRow(self.tr("Input tileset filename:"), self.inputfilename)    
 
         self.pushButton1 = QPushButton("Select tileset")
-        self.pushButton1.clicked.connect(self.TilesetBrowser)
+        self.pushButton1.clicked.connect(lambda: self.Browser(file_filter="Image file (*.png *.bmp *.tiff *.jpg *.jpeg)", button_caption="Open Tileset", input_field=self.inputfilename))
         self.tab1.layout.addWidget(self.pushButton1)
 
         # Toggle for autodetecting the grid of the tileset
@@ -57,35 +57,118 @@ class Tabs(QWidget):
         self.toggleAutoDetect.setChecked(True)
         
         # For manual parameters for grid detection
-        self.tileSizeX = QLineEdit("Tilesize X in px")
-        self.tab1.layout.addWidget(self.tileSizeX)
-        self.tileSizeY = QLineEdit("Tilesize Y in px")
-        self.tab1.layout.addWidget(self.tileSizeY)
-
-        self.gridOffsetX = QLineEdit("Grid offset X in px")
-        self.tab1.layout.addWidget(self.gridOffsetX)
-        self.gridOffsetY = QLineEdit("Grid offset Y in px")
-        self.tab1.layout.addWidget(self.gridOffsetY)
-        self.gridWidth = QLineEdit("Grid width in px")
-        self.tab1.layout.addWidget(self.gridWidth)
+        # X tilesize
+        self.tileSizeX = QLineEdit()
+        self.tab1.layout.addRow(self.tr("Tilesize X in px:"), self.tileSizeX)
+        # Y tilesize
+        self.tileSizeY = QLineEdit()
+        self.tab1.layout.addRow(self.tr("Tilesize Y in px:"), self.tileSizeY)
+        # Grid offset X
+        self.gridOffsetX = QLineEdit()
+        self.tab1.layout.addRow(self.tr("Grid offset X in px:"), self.gridOffsetX)
+        # Grid offset Y
+        self.gridOffsetY = QLineEdit()
+        self.tab1.layout.addRow(self.tr("Grid offset Y in px:"), self.gridOffsetY)
+        # Grid width
+        self.gridWidth = QLineEdit()
+        self.tab1.layout.addRow(self.tr("Grid width in px:"), self.gridWidth)
         
         self.autoDetectToggle()
+
+        # Execute button
+        self.pushButtonGo1 = QPushButton("Extract tiles from tileset")
+        # self.pushButton1.clicked.connect() # TODO
+        self.tab1.layout.addWidget(self.pushButtonGo1)
         self.tab1.setLayout(self.tab1.layout)
+
 
         # Create Tab 2: determining the rules of the world by matching tileset in world
         self.tab2.layout = QFormLayout(self)
-        self.pushButton2 = QPushButton("PyQt5 button")
+
+        # Selecting tileset folder
+        self.tilesetfolder = QLineEdit()
+        self.tab2.layout.addRow(self.tr("Input tileset filename:"), self.tilesetfolder)    
+
+        self.pushButton2 = QPushButton("Select tileset folder")
+        self.pushButton2.clicked.connect(lambda: self.Browser(file_filter="dir", button_caption="Open Tileset Folder", input_field=self.tilesetfolder))
         self.tab2.layout.addWidget(self.pushButton2)
+
+        # Selecting world image
+        self.inputworld = QLineEdit()
+        self.tab2.layout.addRow(self.tr("Overworld image filename:"), self.inputworld)    
+
+        self.pushButton3 = QPushButton("Select world")
+        self.pushButton3.clicked.connect(lambda: self.Browser(file_filter="Image file (*.png *.bmp *.tiff *.jpg *.jpeg)", button_caption="Open World", input_field=self.inputworld))
+        self.tab2.layout.addWidget(self.pushButton3)
+
+        # Selecting output .json
+        self.outputneighborrules = QLineEdit()
+        self.tab2.layout.addRow(self.tr("Output neighbor filename:"), self.outputneighborrules)    
+
+        self.pushButton4 = QPushButton("Select output neighbor file")
+        self.pushButton4.clicked.connect(lambda: self.Browser(file_filter="JSON file(*.json)", button_caption="Write to ruleset", input_field=self.outputneighborrules))
+        self.tab2.layout.addWidget(self.pushButton4)
+
+        self.pushButtonGo2 = QPushButton("Detect tile neighbor ruleset")
+        # self.pushButtonGo2.clicked.connect() # TODO
+        self.tab2.layout.addWidget(self.pushButtonGo2)
+
         self.tab2.setLayout(self.tab2.layout)
         
+        
+        # Create Tab 3: Wave collapse the world
+        self.tab3.layout = QFormLayout(self)
+        # Stap 3: Genereer wereld. Nodig: x en y, tileset map, regels-bestand, output file.
+        # X worldsize
+        
+        self.worldSizeX = QLineEdit()
+        self.tab3.layout.addRow(self.tr("Worldsize X:"), self.worldSizeX)
+        # Y worldsize
+        self.worldSizeY = QLineEdit()
+        self.tab3.layout.addRow(self.tr("Worldsize Y:"), self.worldSizeY)
+
+        # Tileset folder
+        self.tilesetfolder2 = QLineEdit()
+        self.tab3.layout.addRow(self.tr("Input tileset filename:"), self.tilesetfolder2)    
+
+        self.pushButton5 = QPushButton("Select tileset folder")
+        self.pushButton5.clicked.connect(lambda: self.Browser(file_filter="dir", button_caption="Open Tileset Folder", input_field=self.tilesetfolder2))
+        self.tab3.layout.addWidget(self.pushButton5)
+
+        # Neighbor rules
+        self.outputneighborrules2 = QLineEdit()
+        self.tab3.layout.addRow(self.tr("Input neighbor filename:"), self.outputneighborrules2)    
+
+        self.pushButton6 = QPushButton("Select input neighbor file")
+        self.pushButton6.clicked.connect(lambda: self.Browser(file_filter="JSON file(*.json)", button_caption="Open neighbor ruleset", input_field=self.outputneighborrules))
+        self.tab3.layout.addWidget(self.pushButton6)
+
+        # Output world file
+        self.inputworld = QLineEdit()
+        self.tab3.layout.addRow(self.tr("Output world file:"), self.inputworld)    
+
+        self.pushButton7 = QPushButton("Select world output file")
+        self.pushButton7.clicked.connect(lambda: self.Browser(file_filter="Image file (*.png *.bmp *.tiff *.jpg *.jpeg)", button_caption="Write World", input_field=self.inputworld))
+        self.tab3.layout.addWidget(self.pushButton7)
+
+        self.pushButtonGo3 = QPushButton("Generate World")
+        # self.pushButtonGo3.clicked.connect() # TODO
+        self.tab3.layout.addWidget(self.pushButtonGo3)
+
+        self.tab3.setLayout(self.tab3.layout)
         # Add tabs to widget
         self.layout.addWidget(self.tabs)
         # self.setLayout(self.layout)
 
-    def TilesetBrowser(self):
-        file_filter = "Image file (*.png *.bmp *.tiff *.jpg *.jpeg)"
-        fileName, _ = QFileDialog.getOpenFileName(parent=self, caption= "Open Tileset", directory=getcwd(), filter=file_filter)
-        self.inputfilename.setText(fileName)
+
+    def Browser(self, file_filter, button_caption, input_field):
+        if file_filter == "dir":
+            folderName = QFileDialog.getExistingDirectory(parent=self, caption=button_caption, directory=getcwd())
+            input_field.setText(folderName)
+        else:    
+            fileName, _ = QFileDialog.getOpenFileName(parent=self, caption=button_caption, directory=getcwd(), filter=file_filter)
+            input_field.setText(fileName)
+
         
     def autoDetectToggle(self):
         value = self.toggleAutoDetect.isChecked()
