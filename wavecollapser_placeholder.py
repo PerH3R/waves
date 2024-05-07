@@ -124,6 +124,21 @@ class World:
         new_world_map.save('world.png')
         print("Saved image!")
         # new_world_map.show()
+
+    def show_image(self, tile_imgs):
+        new_world_map = Image.new('RGB', (self.xSize*tileYsize, self.ySize*tileXsize))
+        for x in range(self.xSize):
+            for y in range(self.ySize):
+                if self.world[x][y].get_tile_id() != '-1':
+                    converted_img = cv.cvtColor(tile_imgs[self.world[x][y].get_tile_id()], cv.COLOR_BGR2RGB)
+                    tile_img = Image.fromarray(converted_img)
+                    new_world_map.paste(tile_img, (x*tileXsize, y*tileYsize))
+        # new_world_map.save('world.png')
+        # print("Saved image!")
+        open_cv_image = np.array(new_world_map)
+        open_cv_image = open_cv_image[:, :, ::-1].copy() #RGB to BGR
+        cv.imshow('Current state', open_cv_image)
+        cv.waitKey(10)
                 
             
                       
@@ -238,18 +253,17 @@ class Tile:
 
 # Load tile images
 def load_tile_imgs(foldername):
-    tilefolder = foldername+"_tiles/"
-    tiles = {file.split(".")[0]: cv.imread(tilefolder + file) for file in os.listdir(tilefolder)}
+    tiles = {file.split(".")[0]: cv.imread(foldername + "/" + file) for file in os.listdir(foldername)}
     return tiles
 
 # Load tile rules
 def load_neighbors_json(filename):
-    with open("{f}_neighbors.json".format(f=filename), "r") as file:
+    with open(filename, "r") as file:
         tile_neighbors = json.load(file)
         return tile_neighbors
 
 
-def generate(world):
+def generate(world, tile_imgs):
     # Main generating loop
     while(True):
         # If stuck, return and try another config
@@ -288,13 +302,14 @@ def generate(world):
                 world.collapse()
                 
                 print("Current world")
+                world.show_image(tile_imgs)
                 world.debug_terminal_print()
                 print("Current entropy")
                 world.debug_terminal_print_entropy()
                 print()
 
                 # Recursion: try to generate further with the current world
-                done_world = generate(copy.deepcopy(world))
+                done_world = generate(copy.deepcopy(world), tile_imgs)
                 # Propagate world out of recursion if we are done
                 if done_world != None and done_world.done_check():
                     print("We are done")
@@ -309,18 +324,12 @@ def generate(world):
     
 
 
-def main():
-    tilesname = input("What tileset to use for world generation? ")
-    tile_imgs = load_tile_imgs(tilesname)
-    tile_neighbors = load_neighbors_json(tilesname)
-    xSize = input("What world size? X-coodinate: ")
-    ySize = input("What world size? Y-coordinate: ")
-
+def waveCollapse(tileset_folder, neighbor_rules_file, xSize, ySize):
+    tile_imgs = load_tile_imgs(tileset_folder)
+    neighbor_rules = load_neighbors_json(neighbor_rules_file)
     all_tile_ids = list(tile_imgs.keys())
-    world = World(xSize, ySize, tile_neighbors)
-
-    world = generate(world)
-
+    world = World(xSize, ySize, neighbor_rules)
+    world = generate(world, tile_imgs)
     world.create_image(tile_imgs)
 
 
@@ -328,8 +337,12 @@ def main():
 
     
 
-if __name__=="__main__": 
-    main()
+if __name__=="__main__":
+    tileset_folder = input("What tileset to use for world generation? ")
+    neighbor_rules = input("What neighbor rules file to use for world generation? ")
+    xSize = input("What world size? X-coodinate: ")
+    ySize = input("What world size? Y-coordinate: ")
+    waveCollapse(tileset_folder, neighbor_rules, xSize, ySize)
 
 """
 TODO:
@@ -341,7 +354,7 @@ worden, waaronder water.
 
 Gewichten zodat we niet 3 telefoonhuisjes krijgen
 
-Animatie van genereren, met live entropie updates.
+Animatie van genereren, met live entropie updates. Partially. done
 
 Misschien ook nog als extensie: kijken tussen world-sections, maar niet altijd.
 Alleen als het in dezelfde type "biome" is?

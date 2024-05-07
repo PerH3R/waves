@@ -6,9 +6,7 @@
 import cv2 as cv
 import numpy as np
 import sys
-import matplotlib.pyplot as plt
 import os
-import copy
 
 
 def read_args(argflag):
@@ -40,11 +38,12 @@ def add_tile(tile, tilelist, hashset=None):
             tilelist.append(tile)
     
 def write_tiles(file_dir, tilelist):
-    os.makedirs("./{f}_tiles".format(f=file_dir), exist_ok=True)
+
+    os.makedirs(file_dir, exist_ok=True)
     imgname = 0
     for tile in tilelist:
         try:
-            cv.imwrite("./{f}_tiles/{i}.png".format(f=file_dir, i=imgname), tile)
+            cv.imwrite("{f}/{i}.png".format(f=file_dir, i=imgname), tile)
             imgname += 1
 
         except:
@@ -60,7 +59,7 @@ def write_tiles(file_dir, tilelist):
 # this is safe to assume.
 # The grid also needs to go around the border of the whole image.
 # We use the top left pixel to detect the color of the mask.
-def separate_grid(filename, tileset):
+def separate_grid(tileset, output_path):
     # Detect grid color. Legacy: use the pixel at (0,0) to determine the grid color.
     gridcolor = tileset[0,0]
 
@@ -78,9 +77,9 @@ def separate_grid(filename, tileset):
     color_mask = mask.astype(np.uint8)
     color_mask *= 255
 
-    # Save mask to file to inspect
-    os.makedirs("./masks", exist_ok=True)
-    cv.imwrite("./masks/{f}_mask.png".format(f=filename), color_mask)
+    # Save mask to file to inspect TODO: doesn't work now anymore with new filename conventions
+    # os.makedirs("./masks", exist_ok=True)
+    # cv.imwrite("./masks/{f}_mask.png".format(f=output_path), color_mask)
 
     # Detect contours
     contours, hierarchy = cv.findContours(image=color_mask, mode=cv.RETR_TREE, method=cv.CHAIN_APPROX_SIMPLE)
@@ -133,14 +132,14 @@ def separate_grid(filename, tileset):
         add_tile(box_image, tiles_list, tiles_hash)
     
     
-    write_tiles(filename, tiles_list)
+    write_tiles(output_path, tiles_list)
 
 
 # "Hardcoded" tile extraction, for tilesets that contain no grid lines.
 # tilesize denotes the standard size of the tiles (16 means 16x16).
 # Offset is for the cases where there is a border around the entire tileset,
 # but no grid.
-def fixed_offset_extraction(filename, tileset, tilesize, offset):
+def fixed_offset_extraction(tileset, output_path, tilesize, gridOffsetX, gridOffsetY, gridSizePx):
     x = 0
     y = 0
     tilesetX_size = tileset.shape[:2][1]
@@ -148,37 +147,33 @@ def fixed_offset_extraction(filename, tileset, tilesize, offset):
     tiles_list = []
     tiles_hash = set()
     print(tilesetX_size, tilesetY_size)
-    for x in range(offset, tilesetX_size, tilesize):
-        for y in range(offset, tilesetY_size, tilesize):
+    for x in range(gridOffsetX, tilesetX_size, tilesize+gridSizePx):
+        for y in range(gridOffsetY, tilesetY_size, tilesize+gridSizePx):
             box_image = tileset[y : y+tilesize, x : x+tilesize]
             add_tile(box_image, tiles_list, tiles_hash)
 
-    write_tiles(filename, tiles_list)
+    write_tiles(output_path, tiles_list)
     
 
 
-def main():
+def tileGen(filename_path, output_path, tileSize, gridOffsetX, gridOffsetY, gridSize):
     #load tileset
-    filename_path = sys.argv[1]
     tileset = load_tileset(filename_path)
-    filename = os.path.basename(filename_path).split(".")[0]
-    print("Filename:" , filename)
+    # filename = os.path.basename(filename_path).split(".")[0]   
 
-    
-
-    #if grid, detect distance between tiles
-    # if read_args("-g") != 
-    tileSizePx = read_args("-t") #-1 if not specified
-    gridSizePx = read_args("-g")
-    borderSizePx = read_args("-b")
-
-    if borderSizePx == -1 and tileSizePx == -1:
-        separate_grid(filename, tileset)
+    if gridOffsetX == -1 and gridOffsetY and tileSize == -1:
+        separate_grid(tileset, output_path)
     else:
         print("manual mode")
-        fixed_offset_extraction(filename, tileset, tileSizePx, borderSizePx)
+        fixed_offset_extraction(tileset, output_path, tileSize, gridOffsetX, gridOffsetY, gridSize)
 
     
 
 if __name__=="__main__": 
-    main() 
+    filename_path = sys.argv[1]
+    output_path = sys.argv[1]
+    tileSize = read_args("-t") #-1 if not specified
+    gridSize = read_args("-g") # TODO
+    gridOffsetX = read_args("-w")
+    gridOffsetY = read_args("-h")
+    tileGen(filename_path, output_path, tileSize, gridOffsetX, gridOffsetY, gridSize)

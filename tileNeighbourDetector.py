@@ -6,7 +6,10 @@ np.zeroes = np.zeros # We like being British
 from copy import deepcopy
 from tqdm import tqdm
 import json
+import ntpath
 
+tileSizeY = 16
+tileSizeX = 16
 
 # todo -> contouring worldmap af, area bij area kopies maken met nummers gematched aan tiles om vervolgens burenlijsten van te kunnen maken
 
@@ -33,7 +36,7 @@ def load_world(filename):
 
 
 def load_tiles(foldername):
-    tiles = {file.split(".")[0]: cv.imread(foldername+file) for file in os.listdir(foldername)}
+    tiles = {file.split(".")[0]: cv.imread(foldername + "/" +file) for file in os.listdir(foldername)}
     tilesize = list(tiles.values())[0].shape[0]
     return tiles, tilesize
     
@@ -98,8 +101,23 @@ def split_sections(world, size):
     return world_sections
 
 
+def validate_supplied_tile(tile_nr, tile_folder):
+    if not os.path.exists(tile_nr):
+        print("Path of the file is invalid")
+        return False
+    imgfile
+    try:
+        imgfile = cv.imread(os.path.join(tile_folder, str(tile_nr)+".png"))
+    except:
+        print("not a valid img")
+        return False
+    if not (imgfile.shape[0] == tileSizeX and imgfile.shape[1] == tileSizeY):
+        print("Size of the image is invalid")
+        return False
+    return True
+
 #gets a (subsection of) the world and returns the representation of the tiles as ids as an 2d-array
-def build_section_ids(world_section, tileset, size):
+def build_section_ids(world_section, tileset, size, tile_folder):
     # Create an array for the tile ids we find. Initialize on -1 for tiles we did not find.
     section_numbered = np.full((int(world_section.shape[0]/size), int(world_section.shape[1]/size)), -1)
 
@@ -122,11 +140,21 @@ def build_section_ids(world_section, tileset, size):
                 # cv.imwrite("matches/{id}/{id}-match.png".format(id=id), world_section_copy)
                 section_numbered[int(m[1]/size)][int(m[0]/size)] = id
 
-    unknown_imgs = []
+    """
+    unknown_imgs = [] 
     for y in range(section_numbered.shape[0]):
         for x in range(section_numbered.shape[0]):
             if section_numbered[y][x] == -1:
-                unknown_imgs.append(world_section[y:y+16, x:x+16])
+                unknown_imgs.append(world_section[(y*tileSizeY):(y+1)*tileSizeY, (x*tileSizeX):(x+1)*tileSizeX])
+                cv.imshow('Missing image', unknown_imgs[-1])
+                tile_nr = ("Please type number of the tile to use here (without file extension e.g. type '1' if you want '1.png'), leave empty if you want to ignore:")
+                while (not (tile_nr == "")) or not tile_nr.isdigit():
+                    tile_nr = ("Wrong tilename. \n Please type number of the tile to use here (without file extension e.g. type '1' if you want '1.png'), leave empty if you want to ignore:")
+                cv.waitKey(1)
+                
+                if not tile_nr == "": 
+                    if validate_supplied_tile(tile_nr, tile_folder):
+                        section_numbered[y][x] = tile_nr
     # print(unknown_imgs)
     i = 0
     same_img_idx = []
@@ -137,9 +165,9 @@ def build_section_ids(world_section, tileset, size):
     #             pass
     # for idx in same_img_idx.reverse():
     #     unknown_imgs[i]
-    for img in unknown_imgs:
-        cv.imshow('Missing image', img)
-        cv.waitKey(1)
+    """
+        
+        
     return section_numbered
 
 def add_sect_to_dict(section_numbered, neighbourdict):
@@ -169,42 +197,46 @@ def add_sect_to_dict(section_numbered, neighbourdict):
                 neighbourdict[selfTile]["left"].add(str(section_numbered[row][col-1]))
 
 
-def main():
-    #load tileset. The user gives the name of the world (LADX, AlttP)
-    # and the tiles and world are automatically loaded according to the
-    # standard naming convention. TODO: is this the nice way to do it?
-    worldname = sys.argv[1]
-    tileset, size = load_tiles(worldname + "_tiles/")
-    world = load_world("worlds/" + worldname + "_world.png")
+def tileNBdetect(tile_folder, worldname, sections_folder, output_file):
+    tileset, size = load_tiles(tile_folder)
+    world = load_world(worldname)
 
     neighbourdict = {} # Tile
 
     world_sections = split_sections(world, size)
     sec = 0
-    os.makedirs("world_sections_{w}/".format(w=worldname), exist_ok=True)
+    
+    os.makedirs(sections_folder, exist_ok=True)
     for s in world_sections:
-        cv.imwrite("world_sections_{w}/section_{sec}.png".format(w=worldname, sec=sec),s)
+        cv.imwrite("{w}/section_{sec}.png".format(w=sections_folder, sec=sec),s)
         sec += 1
 
     neighbourdict = {}
 
     print("Matching tiles in each world section...")
     for section in tqdm(world_sections):
-        section_numbered = build_section_ids(section, tileset, size)
+        section_numbered = build_section_ids(section, tileset, size, tile_folder)
         add_sect_to_dict(section_numbered, neighbourdict)
     #convert sets to lists for json dumping
     for tile in neighbourdict.keys():
         for direction in neighbourdict[tile].keys():
             neighbourdict[tile][direction] = list(neighbourdict[tile][direction])
-    with open("{w}_neighbors.json".format(w=worldname), "w") as f:
+    with open(output_file, "w") as f:
         json.dump(neighbourdict, f, indent=4)
 
 
 
     
 
-if __name__=="__main__": 
-    main()
+if __name__=="__main__":
+    # TODO: convert to typer?
+    worldname = sys.argv[1]
+    tile_folder = None
+    sections_folder = None
+    output_file = None
 
+    tileNBdetect(tile_folder, worldname, sections_folder, output_file)
+
+# TODO: can this be removed?
 # result = cv.matchTemplate(image, template, cv2.TM_CCOEFF_NORMED)
 # (yCoords, xCoords) = np.where(result >= args["threshold"])
