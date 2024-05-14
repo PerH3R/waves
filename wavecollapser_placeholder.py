@@ -9,19 +9,16 @@ from PIL import Image
 import typer
 from typing_extensions import Annotated
 
-# tilesize
-tileXsize = 16
-tileYsize = 16
+from utils import load_tile_imgs
 
-all_tiles = []
-all_tiles_gray = []
 
 class World:
-    def __init__(self, xSize, ySize, neighbor_rules):
+    def __init__(self, xSize, ySize, neighbor_rules, tile_size):
         self.xSize = int(xSize)
         self.ySize = int(ySize)
         self.history = [] # Stack
         self.neighbor_rules = neighbor_rules
+        self.tile_size = tile_size
         self.create_new_world(self.xSize, self.ySize)
     
     # Creates an empty world
@@ -111,25 +108,25 @@ class World:
                         
 
     def create_image(self, tile_imgs):
-        new_world_map = Image.new('RGB', (self.xSize*tileYsize, self.ySize*tileXsize))
+        new_world_map = Image.new('RGB', (self.xSize*self.tile_size, self.ySize*self.tile_size))
         for x in range(self.xSize):
             for y in range(self.ySize):
                 if self.world[x][y].get_tile_id() != '-1':
                     converted_img = cv.cvtColor(tile_imgs[self.world[x][y].get_tile_id()], cv.COLOR_BGR2RGB)
                     tile_img = Image.fromarray(converted_img)
-                    new_world_map.paste(tile_img, (x*tileXsize, y*tileYsize))
+                    new_world_map.paste(tile_img, (x*self.tile_size, y*self.tile_size))
         new_world_map.save('world.png')
         print("Saved image!")
         # new_world_map.show()
 
     def show_image(self, tile_imgs):
-        new_world_map = Image.new('RGB', (self.xSize*tileYsize, self.ySize*tileXsize))
+        new_world_map = Image.new('RGB', (self.xSize*self.tile_size, self.ySize*self.tile_size))
         for x in range(self.xSize):
             for y in range(self.ySize):
                 if self.world[x][y].get_tile_id() != '-1':
                     converted_img = cv.cvtColor(tile_imgs[self.world[x][y].get_tile_id()], cv.COLOR_BGR2RGB)
                     tile_img = Image.fromarray(converted_img)
-                    new_world_map.paste(tile_img, (x*tileXsize, y*tileYsize))
+                    new_world_map.paste(tile_img, (x*self.tile_size, y*self.tile_size))
         # new_world_map.save('world.png')
         # print("Saved image!")
         open_cv_image = np.array(new_world_map)
@@ -246,12 +243,7 @@ class Tile:
     # Returns the position of the tile in the world.
     def get_position(self):
         return self.x, self.y
-
-
-# Load tile images
-def load_tile_imgs(foldername):
-    tiles = {file.split(".")[0]: cv.imread(foldername + "/" + file) for file in os.listdir(foldername)}
-    return tiles
+    
 
 # Load tile rules
 def load_neighbors_json(filename):
@@ -325,10 +317,10 @@ def waveCollapse(tileset_folder: Annotated[str, typer.Argument(help="The folder 
                  neighbor_rules_file: Annotated[str, typer.Argument(help="The JSON file containing the rules of what tiles can have which neighbors.")],
                  xSize: Annotated[int, typer.Argument(help="The horizontal dimension of the generated world in number of tiles.")],
                  ySize: Annotated[int, typer.Argument(help="The vertical dimension of the generated world in number of tiles.")]):
-    tile_imgs = load_tile_imgs(tileset_folder)
+    tile_imgs, tile_size = load_tile_imgs(tileset_folder)
     neighbor_rules = load_neighbors_json(neighbor_rules_file)
     all_tile_ids = list(tile_imgs.keys())
-    world = World(xSize, ySize, neighbor_rules)
+    world = World(xSize, ySize, neighbor_rules, tile_size)
     world = generate(world, tile_imgs)
     world.create_image(tile_imgs)
 

@@ -7,15 +7,14 @@ from tqdm import tqdm
 import json
 import ntpath
 
+import climage
+
 import typer
 from typing_extensions import Annotated
 
-import climage 
+from utils import load_world_tileset, load_tile_imgs
 
 np.zeroes = np.zeros # We like being British
-
-tileSizeY = 16
-tileSizeX = 16
 
 # todo -> contouring worldmap af, area bij area kopies maken met nummers gematched aan tiles om vervolgens burenlijsten van te kunnen maken
 
@@ -31,20 +30,6 @@ tileSizeX = 16
     #             \> tile nrs of tiles that are allowed to be at this position respective of current tile
     # possibilities = np.zeroes(num_tiles)
 
-num_tiles = 1
-
-
-#loads world png
-def load_world(filename):
-    print(filename)
-    world = cv.imread(filename)
-    return world
-
-
-def load_tiles(foldername):
-    tiles = {file.split(".")[0]: cv.imread(foldername + "/" +file) for file in os.listdir(foldername)}
-    tilesize = list(tiles.values())[0].shape[0]
-    return tiles, tilesize
     
 # uses contours to extract the different areas of an overworld file
 # returns seperate sections of the world
@@ -117,15 +102,15 @@ def validate_supplied_tile(tile_nr, tile_folder, tile_size):
     except:
         print("not a valid img")
         return False
-    if not (imgfile.shape[0] == tileSizeX and imgfile.shape[1] == tileSizeY):
+    if not (imgfile.shape[0] == tile_size and imgfile.shape[1] == tile_size):
         print("Size of the image is invalid")
         return False
     return True
 
 #gets a (subsection of) the world and returns the representation of the tiles as ids as an 2d-array
-def build_section_ids(world_section, tileset, size, tile_folder):
+def build_section_ids(world_section, tileset, tile_size, specified_tiles):
     # Create an array for the tile ids we find. Initialize on -1 for tiles we did not find.
-    section_numbered = np.full((int(world_section.shape[0]/size), int(world_section.shape[1]/size)), -1)
+    section_numbered = np.full((int(world_section.shape[0]/tile_size), int(world_section.shape[1]/tile_size)), -1)
 
     # For each tile, we match it in the world (section).
     for id, tile in tileset.items():
@@ -138,47 +123,58 @@ def build_section_ids(world_section, tileset, size, tile_folder):
         loc = np.where(res <= threshold)
         for m in zip(*loc[::-1]):
             # only take into account matches coinciding with stride length
-            if m[0] % size == 0 and m[1] % size == 0:
+            if m[0] % tile_size == 0 and m[1] % tile_size == 0:
                 # print(id)
                 # print(m)
-                # print(m[0]/size, m[1]/size)
+                # print(m[0]/tile_size, m[1]/tile_size)
                 # cv.rectangle(world_section_copy, m, (m[0]+w, m[1]+h), (0,0,255), 1)
                 # cv.imwrite("matches/{id}/{id}-match.png".format(id=id), world_section_copy)
-                section_numbered[int(m[1]/size)][int(m[0]/size)] = id
+                section_numbered[int(m[1]/tile_size)][int(m[0]/tile_size)] = id
 
-    """
     unknown_imgs = [] 
     for y in range(section_numbered.shape[0]):
         for x in range(section_numbered.shape[0]):
             if section_numbered[y][x] == -1:
-                unknown_imgs.append(world_section[(y*tileSizeY):(y+1)*tileSizeY, (x*tileSizeX):(x+1)*tileSizeX])
-                print(unknown_imgs[-1])
-                print(unknown_imgs[-1].shape)
-                # cv.imshow('Unknown Image', unknown_imgs[-1])
-                # _ = cv.waitKey(0)
-                # cv.imwrite(tile_folder+'/temp.png', unknown_imgs[-1])
-                output = climage.convert_array(cv.cvtColor(unknown_imgs[-1], cv.COLOR_BGR2RGB), is_unicode=True) 
-                # os.remove(tile_folder+'/temp.png')
-                # prints output on console. 
-                print(output)
-                tile_nr = input("Please type number of the tile to use here (without file extension e.g. type '1' if you want '1.png'), leave empty if you want to ignore:")
-                while (not (tile_nr == "")) or not tile_nr.isdigit():
-                    tile_nr = ("Wrong tilename. \n Please type number of the tile to use here (without file extension e.g. type '1' if you want '1.png'), leave empty ot ype '-1' if you want to ignore:")
+                current_subsection = world_section[(y*tileSizeY):(y+1)*tileSizeY, (x*tileSizeX):(x+1)*tileSizeX]
+                specified_tiles_idx = -1
                 
-                if not tile_nr == "": 
-                    if validate_supplied_tile(tile_nr, tile_folder):
-                        section_numbered[y][x] = int(tile_nr)
+                specified_tiles_idx = -1
+                for i in range(len(specified_tiles[0])):
+                    if np.array_equal(specified_tiles[0][i], current_subsection):
+                        specified_tiles_idx = i
+
+
+                print("idx", specified_tiles_idx)
+                if specified_tiles_idx != -1:                    
+                    section_numbered[y][x] = specified_tiles[1][specified_tiles_idx]
+                else:
+                    unknown_imgs.append(current_subsection)
+                    # print(unknown_imgs[-1])
+                    print(unknown_imgs[-1].shape)
+                    output = climage.convert_array(cv.cvtColor(world_section, cv.COLOR_BGR2RGB), is_unicode=True) 
+                    print(output)
+                    output = climage.convert_array(cv.cvtColor(unknown_imgs[-1], cv.COLOR_BGR2RGB), is_unicode=True) 
+                    # prints output on console. 
+                    print(output)
+                    tile_nr = input("Please type number of the tile to use here (without file extension e.g. type '1' if you want '1.png'), leave empty if you want to ignore:")
+                    print(tile_nr)
+                    while not (tile_nr == "") and not tile_nr.isdigit():
+                        tile_nr = input("Wrong tilename. \n Please type number of the tile to use here (without file extension e.g. type '1' if you want '1.png'), leave empty ot ype '-1' if you want to ignore:")
+                    
+                    if not tile_nr == "" and not tile_nr == "-1": 
+                        if validate_supplied_tile(tile_nr, tile_folder):
+                            section_numbered[y][x] = int(tile_nr)
+                            specified_tiles[0].append(current_subsection)
+                            specified_tiles[1].append(int(tile_nr))
+                    else:
+                        print("Ignored")
+                        section_numbered[y][x] = -1
+                        specified_tiles[0].append(current_subsection)
+                        specified_tiles[1].append(-1)
+
     print(unknown_imgs)
     i = 0
     same_img_idx = []
-    # while i < len(unknown_imgs)-1:        
-    #     for j in range(len(unknown_imgs[i+1:])):
-    #         if unknown_imgs[i] == unknown_imgs[j]:
-    #             same_img_idx.append(j)
-    #             pass
-    # for idx in same_img_idx.reverse():
-    #     unknown_imgs[i]
-    """
         
         
     return section_numbered
@@ -221,12 +217,12 @@ def tileNBdetect(tile_folder: Annotated[str, typer.Argument(help="The folder con
     typer.echo(f"World sections folder: {sections_folder}")
     typer.echo(f"Output JSON file: {output_file}")
 
-    tileset, size = load_tiles(tile_folder)
-    world = load_world(world_name)
+    tileset, tile_size = load_tile_imgs(tile_folder)
+    world = load_world_tileset(world_name)
 
     neighbourdict = {} # Tile
 
-    world_sections = split_sections(world, size)
+    world_sections = split_sections(world, tile_size)
     sec = 0
     
     os.makedirs(sections_folder, exist_ok=True)
@@ -235,10 +231,12 @@ def tileNBdetect(tile_folder: Annotated[str, typer.Argument(help="The folder con
         sec += 1
 
     neighbourdict = {}
+    specified_tiles = [[], #image data
+                        []] #tile_nr
 
     print("Matching tiles in each world section...")
     for section in tqdm(world_sections):
-        section_numbered = build_section_ids(section, tileset, size, tile_folder)
+        section_numbered = build_section_ids(section, tileset, tile_size)
         add_sect_to_dict(section_numbered, neighbourdict)
     #convert sets to lists for json dumping
     for tile in neighbourdict.keys():

@@ -12,11 +12,7 @@ from typing import Optional
 import typer
 from typing_extensions import Annotated
 
-
-def load_tileset(filename):
-    print(filename)
-    tileset = cv.imread(filename)
-    return tileset
+from utils import load_world_tileset
 
 
 def guess_grid_size():
@@ -32,8 +28,8 @@ def add_tile(tile, tilelist, hashset=None):
             hashset.add(hash(str(tile)))
             tilelist.append(tile)
     
+    
 def write_tiles(file_dir, tilelist):
-
     os.makedirs(file_dir, exist_ok=True)
     imgname = 0
     for tile in tilelist:
@@ -160,7 +156,7 @@ def tileGen(
         grid_size: Annotated[Optional[int], typer.Option(help="The size of the grid; the width of the lines separating tiles, in pixels.")] = None
         ):
     #load tileset
-    tileset = load_tileset(filename_path)
+    tileset = load_world_tileset(filename_path)
     # filename = os.path.basename(filename_path).split(".")[0]  
 
     typer.echo(f"Filename path: {filename_path}")
