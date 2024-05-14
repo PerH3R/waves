@@ -12,6 +12,8 @@ from typing import Optional
 import typer
 from typing_extensions import Annotated
 
+from PyQt5.QtCore import QObject, QThread, pyqtSignal
+
 
 def load_tileset(filename):
     print(filename)
@@ -55,6 +57,9 @@ def write_tiles(file_dir, tilelist):
 # The grid also needs to go around the border of the whole image.
 # We use the top left pixel to detect the color of the mask.
 def separate_grid(tileset, output_path):
+    progressChanged = pyqtSignal(int)
+    finished = pyqtSignal()
+
     # Detect grid color. Legacy: use the pixel at (0,0) to determine the grid color.
     gridcolor = tileset[0,0]
 
@@ -95,6 +100,8 @@ def separate_grid(tileset, output_path):
     tiles_list = []
     tiles_hash = set()
 
+    contour_n = 0
+
     # For all contours, cut out tile
     for c in contours:
         maxX, maxY = -1, -1
@@ -125,6 +132,8 @@ def separate_grid(tileset, output_path):
 
         # Hash the tile to ensure we only save unique tiles
         add_tile(box_image, tiles_list, tiles_hash)
+
+        progress = int((contour_n / len(contours)) * 100)
     
     
     write_tiles(output_path, tiles_list)

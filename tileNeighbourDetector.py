@@ -10,6 +10,8 @@ import ntpath
 import typer
 from typing_extensions import Annotated
 
+import climage 
+
 np.zeroes = np.zeros # We like being British
 
 tileSizeY = 16
@@ -150,16 +152,23 @@ def build_section_ids(world_section, tileset, size, tile_folder):
         for x in range(section_numbered.shape[0]):
             if section_numbered[y][x] == -1:
                 unknown_imgs.append(world_section[(y*tileSizeY):(y+1)*tileSizeY, (x*tileSizeX):(x+1)*tileSizeX])
-                cv.imshow('Missing image', unknown_imgs[-1])
-                tile_nr = ("Please type number of the tile to use here (without file extension e.g. type '1' if you want '1.png'), leave empty if you want to ignore:")
+                print(unknown_imgs[-1])
+                print(unknown_imgs[-1].shape)
+                # cv.imshow('Unknown Image', unknown_imgs[-1])
+                # _ = cv.waitKey(0)
+                # cv.imwrite(tile_folder+'/temp.png', unknown_imgs[-1])
+                output = climage.convert_array(cv.cvtColor(unknown_imgs[-1], cv.COLOR_BGR2RGB), is_unicode=True) 
+                # os.remove(tile_folder+'/temp.png')
+                # prints output on console. 
+                print(output)
+                tile_nr = input("Please type number of the tile to use here (without file extension e.g. type '1' if you want '1.png'), leave empty if you want to ignore:")
                 while (not (tile_nr == "")) or not tile_nr.isdigit():
-                    tile_nr = ("Wrong tilename. \n Please type number of the tile to use here (without file extension e.g. type '1' if you want '1.png'), leave empty if you want to ignore:")
-                cv.waitKey(1)
+                    tile_nr = ("Wrong tilename. \n Please type number of the tile to use here (without file extension e.g. type '1' if you want '1.png'), leave empty ot ype '-1' if you want to ignore:")
                 
                 if not tile_nr == "": 
                     if validate_supplied_tile(tile_nr, tile_folder):
-                        section_numbered[y][x] = tile_nr
-    # print(unknown_imgs)
+                        section_numbered[y][x] = int(tile_nr)
+    print(unknown_imgs)
     i = 0
     same_img_idx = []
     # while i < len(unknown_imgs)-1:        
