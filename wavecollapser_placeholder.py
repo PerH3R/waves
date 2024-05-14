@@ -6,15 +6,12 @@ import numpy as np
 from random import choice
 from PIL import Image
 
+import typer
+from typing_extensions import Annotated
+
 # tilesize
 tileXsize = 16
 tileYsize = 16
-
-# Directions
-NORTH = 0
-EAST  = 1
-SOUTH = 2
-WEST  = 3
 
 all_tiles = []
 all_tiles_gray = []
@@ -202,7 +199,7 @@ class World:
         return True
     
     #returns the tile object at x,y
-    def get_tile(self):     
+    def get_tile(self, x, y):     
         return self.world[x][y]
     
     #sets the tile at x,y to id. don't forget to collapse
@@ -324,7 +321,10 @@ def generate(world, tile_imgs):
     
 
 
-def waveCollapse(tileset_folder, neighbor_rules_file, xSize, ySize):
+def waveCollapse(tileset_folder: Annotated[str, typer.Argument(help="The folder containing all separate tile images")],
+                 neighbor_rules_file: Annotated[str, typer.Argument(help="The JSON file containing the rules of what tiles can have which neighbors.")],
+                 xSize: Annotated[int, typer.Argument(help="The horizontal dimension of the generated world in number of tiles.")],
+                 ySize: Annotated[int, typer.Argument(help="The vertical dimension of the generated world in number of tiles.")]):
     tile_imgs = load_tile_imgs(tileset_folder)
     neighbor_rules = load_neighbors_json(neighbor_rules_file)
     all_tile_ids = list(tile_imgs.keys())
@@ -333,16 +333,8 @@ def waveCollapse(tileset_folder, neighbor_rules_file, xSize, ySize):
     world.create_image(tile_imgs)
 
 
-        
-
-    
-
 if __name__=="__main__":
-    tileset_folder = input("What tileset to use for world generation? ")
-    neighbor_rules = input("What neighbor rules file to use for world generation? ")
-    xSize = input("What world size? X-coodinate: ")
-    ySize = input("What world size? Y-coordinate: ")
-    waveCollapse(tileset_folder, neighbor_rules, xSize, ySize)
+    typer.run(waveCollapse)
 
 """
 TODO:

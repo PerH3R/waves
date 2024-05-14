@@ -8,15 +8,10 @@ import numpy as np
 import sys
 import os
 
+from typing import Optional
+import typer
+from typing_extensions import Annotated
 
-def read_args(argflag):
-    for i in sys.argv[2:]:
-        x = i.split('=')
-        if (x[0] == argflag):
-            return int(x[1])
-    return -1
-    
-    
 
 def load_tileset(filename):
     print(filename)
@@ -24,9 +19,9 @@ def load_tileset(filename):
     return tileset
 
 
-def guess_gridsize():
+def guess_grid_size():
     pass
-    # return tileSizePx, gridSizePx
+    # return tile_sizePx, grid_sizePx
 
 # adds a tile to a list. If an accompanying hashset is passed it doesn't add duplicates
 def add_tile(tile, tilelist, hashset=None):
@@ -136,10 +131,10 @@ def separate_grid(tileset, output_path):
 
 
 # "Hardcoded" tile extraction, for tilesets that contain no grid lines.
-# tilesize denotes the standard size of the tiles (16 means 16x16).
+# tile_size denotes the standard size of the tiles (16 means 16x16).
 # Offset is for the cases where there is a border around the entire tileset,
 # but no grid.
-def fixed_offset_extraction(tileset, output_path, tilesize, gridOffsetX, gridOffsetY, gridSizePx):
+def fixed_offset_extraction(tileset, output_path, tile_size, grid_offset_x, grid_offset_y, grid_size):
     x = 0
     y = 0
     tilesetX_size = tileset.shape[:2][1]
@@ -147,33 +142,40 @@ def fixed_offset_extraction(tileset, output_path, tilesize, gridOffsetX, gridOff
     tiles_list = []
     tiles_hash = set()
     print(tilesetX_size, tilesetY_size)
-    for x in range(gridOffsetX, tilesetX_size, tilesize+gridSizePx):
-        for y in range(gridOffsetY, tilesetY_size, tilesize+gridSizePx):
-            box_image = tileset[y : y+tilesize, x : x+tilesize]
+    for x in range(grid_offset_x, tilesetX_size, tile_size+grid_size):
+        for y in range(grid_offset_y, tilesetY_size, tile_size+grid_size):
+            box_image = tileset[y : y+tile_size, x : x+tile_size]
             add_tile(box_image, tiles_list, tiles_hash)
 
     write_tiles(output_path, tiles_list)
     
 
 
-def tileGen(filename_path, output_path, tileSize, gridOffsetX, gridOffsetY, gridSize):
+def tileGen(
+        filename_path: Annotated[str, typer.Argument(help="The filename of the tileset as a .png (or other image file).")],
+        output_path: Annotated[str, typer.Argument(help="The folder name in which the tileset should be extracted as separate image files.")],
+        tile_size: Annotated[Optional[int], typer.Option(help="The tile size dimension in pixels. Both horizontal and vertical.")] = None,
+        grid_offset_x: Annotated[Optional[int], typer.Option(help="The offset at which the leftmost column of tiles starts, in pixels.")] = None,
+        grid_offset_y: Annotated[Optional[int], typer.Option(help="The offset at which the topmost row of tiles starts, in pixels.")] = None,
+        grid_size: Annotated[Optional[int], typer.Option(help="The size of the grid; the width of the lines separating tiles, in pixels.")] = None
+        ):
     #load tileset
     tileset = load_tileset(filename_path)
-    # filename = os.path.basename(filename_path).split(".")[0]   
+    # filename = os.path.basename(filename_path).split(".")[0]  
 
-    if gridOffsetX == -1 and gridOffsetY and tileSize == -1:
+    typer.echo(f"Filename path: {filename_path}")
+    typer.echo(f"Output path: {output_path}")
+    typer.echo(f"Tile size: {tile_size}")
+    typer.echo(f"Grid offset X: {grid_offset_x}")
+    typer.echo(f"Grid offset Y: {grid_offset_y}")
+    typer.echo(f"Grid size: {grid_size}")
+
+    if grid_offset_x is None and grid_offset_y is None and tile_size is None:
         separate_grid(tileset, output_path)
     else:
-        print("manual mode")
-        fixed_offset_extraction(tileset, output_path, tileSize, gridOffsetX, gridOffsetY, gridSize)
+        fixed_offset_extraction(tileset, output_path, tile_size, grid_offset_x, grid_offset_y, grid_size)
 
     
 
-if __name__=="__main__": 
-    filename_path = sys.argv[1]
-    output_path = sys.argv[1]
-    tileSize = read_args("-t") #-1 if not specified
-    gridSize = read_args("-g") # TODO
-    gridOffsetX = read_args("-w")
-    gridOffsetY = read_args("-h")
-    tileGen(filename_path, output_path, tileSize, gridOffsetX, gridOffsetY, gridSize)
+if __name__=="__main__":
+    typer.run(tileGen)

@@ -2,11 +2,15 @@ import cv2 as cv
 import numpy as np
 import os
 import sys
-np.zeroes = np.zeros # We like being British
 from copy import deepcopy
 from tqdm import tqdm
 import json
 import ntpath
+
+import typer
+from typing_extensions import Annotated
+
+np.zeroes = np.zeros # We like being British
 
 tileSizeY = 16
 tileSizeX = 16
@@ -101,7 +105,7 @@ def split_sections(world, size):
     return world_sections
 
 
-def validate_supplied_tile(tile_nr, tile_folder):
+def validate_supplied_tile(tile_nr, tile_folder, tile_size):
     if not os.path.exists(tile_nr):
         print("Path of the file is invalid")
         return False
@@ -197,9 +201,19 @@ def add_sect_to_dict(section_numbered, neighbourdict):
                 neighbourdict[selfTile]["left"].add(str(section_numbered[row][col-1]))
 
 
-def tileNBdetect(tile_folder, worldname, sections_folder, output_file):
+def tileNBdetect(tile_folder: Annotated[str, typer.Argument(help="The folder containing all separate tile images.")],
+                 world_name: Annotated[str, typer.Argument(help="The image file containing the original world from which neighbor rules should be inferred.")],
+                 sections_folder: Annotated[str, typer.Argument(help="The folder in which all separate world sections extracted from the world image file should be saved.")],
+                 output_file: Annotated[str, typer.Argument(help="The output JSON file containing the rules of what tiles can have which neighbors.")]
+                 ):
+    
+    typer.echo(f"Separate tiles tileset folder: {tile_folder}")
+    typer.echo(f"World file: {world_name}")
+    typer.echo(f"World sections folder: {sections_folder}")
+    typer.echo(f"Output JSON file: {output_file}")
+
     tileset, size = load_tiles(tile_folder)
-    world = load_world(worldname)
+    world = load_world(world_name)
 
     neighbourdict = {} # Tile
 
@@ -221,6 +235,8 @@ def tileNBdetect(tile_folder, worldname, sections_folder, output_file):
     for tile in neighbourdict.keys():
         for direction in neighbourdict[tile].keys():
             neighbourdict[tile][direction] = list(neighbourdict[tile][direction])
+    if not output_file.lower().endswith(".json"):
+        output_file += ".json"
     with open(output_file, "w") as f:
         json.dump(neighbourdict, f, indent=4)
 
@@ -229,14 +245,12 @@ def tileNBdetect(tile_folder, worldname, sections_folder, output_file):
     
 
 if __name__=="__main__":
-    # TODO: convert to typer?
-    worldname = sys.argv[1]
-    tile_folder = None
-    sections_folder = None
-    output_file = None
+    typer.run(tileNBdetect)
 
-    tileNBdetect(tile_folder, worldname, sections_folder, output_file)
 
 # TODO: can this be removed?
 # result = cv.matchTemplate(image, template, cv2.TM_CCOEFF_NORMED)
 # (yCoords, xCoords) = np.where(result >= args["threshold"])
+
+# TODO: 1. Add neighbor weights support?
+#       2. We have hardcoded 16x16 tile sizes here, this should be fixed.
