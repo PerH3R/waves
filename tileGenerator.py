@@ -5,8 +5,9 @@
 
 import cv2 as cv
 import numpy as np
-import sys
 import os
+
+from tqdm import tqdm
 
 from typing import Optional
 import typer
@@ -92,7 +93,7 @@ def separate_grid(tileset, output_path):
     tiles_hash = set()
 
     # For all contours, cut out tile
-    for c in contours:
+    for c in tqdm(contours):
         maxX, maxY = -1, -1
         minX = tileset.shape[:2][1]
         minY = tileset.shape[:2][0]

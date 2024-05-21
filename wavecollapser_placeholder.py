@@ -252,7 +252,7 @@ def load_neighbors_json(filename):
         return tile_neighbors
 
 
-def generate(world, tile_imgs):
+def generate(world, tile_imgs, show_generation):
     # Main generating loop
     while(True):
         # If stuck, return and try another config
@@ -290,15 +290,16 @@ def generate(world, tile_imgs):
                 chosen_tile.set_tile_id(chosen_tile_id)
                 world.collapse()
                 
-                print("Current world")
-                world.show_image(tile_imgs)
-                world.debug_terminal_print()
-                print("Current entropy")
-                world.debug_terminal_print_entropy()
-                print()
+                if show_generation:
+                    print("Current world")
+                    world.show_image(tile_imgs)
+                    world.debug_terminal_print()
+                    print("Current entropy")
+                    world.debug_terminal_print_entropy()
+                    print()
 
                 # Recursion: try to generate further with the current world
-                done_world = generate(copy.deepcopy(world), tile_imgs)
+                done_world = generate(copy.deepcopy(world), tile_imgs, show_generation)
                 # Propagate world out of recursion if we are done
                 if done_world != None and done_world.done_check():
                     print("We are done")
@@ -316,12 +317,13 @@ def generate(world, tile_imgs):
 def waveCollapse(tileset_folder: Annotated[str, typer.Argument(help="The folder containing all separate tile images")],
                  neighbor_rules_file: Annotated[str, typer.Argument(help="The JSON file containing the rules of what tiles can have which neighbors.")],
                  xSize: Annotated[int, typer.Argument(help="The horizontal dimension of the generated world in number of tiles.")],
-                 ySize: Annotated[int, typer.Argument(help="The vertical dimension of the generated world in number of tiles.")]):
+                 ySize: Annotated[int, typer.Argument(help="The vertical dimension of the generated world in number of tiles.")],
+                 show_generation: Annotated[bool, typer.Argument(help="Show the world being generated. Note: this may result in slower generation, especially when the generator gets 'stuck' in a local problem.")]):
     tile_imgs, tile_size = load_tile_imgs(tileset_folder)
     neighbor_rules = load_neighbors_json(neighbor_rules_file)
     all_tile_ids = list(tile_imgs.keys())
     world = World(xSize, ySize, neighbor_rules, tile_size)
-    world = generate(world, tile_imgs)
+    world = generate(world, tile_imgs, show_generation)
     world.create_image(tile_imgs)
 
 

@@ -175,9 +175,12 @@ class Tabs(QWidget):
         self.pushButton7 = QPushButton("Select world output file")
         self.pushButton7.clicked.connect(lambda: self.Browser(file_filter="Image file (*.png *.bmp *.tiff *.jpg *.jpeg)", button_caption="Write World", input_field=self.inputworld2))
         self.tab3_layout.addWidget(self.pushButton7)
+
+        self.visualGenerationToggle = QCheckBox("Show live world generation. Note: this may result in slower generation,\nespecially when the generator gets 'stuck' in a local problem.")
+        self.tab3_layout.addWidget(self.visualGenerationToggle)
         
         self.pushButtonGo3 = QPushButton("Generate World")
-        self.pushButtonGo3.clicked.connect(lambda: waveCollapse(tileset_folder=self.tilesetfolder2.text(), neighbor_rules_file=self.inputneighborrules.text(), xSize=int(self.worldSizeX.text()), ySize=int(self.worldSizeY.text())))
+        self.pushButtonGo3.clicked.connect(lambda: waveCollapse(tileset_folder=self.tilesetfolder2.text(), neighbor_rules_file=self.inputneighborrules.text(), xSize=int(self.worldSizeX.text()), ySize=int(self.worldSizeY.text()), show_generation=self.visualGenerationToggle.isChecked()))
         self.tab3_layout.addWidget(self.pushButtonGo3)
 
         # Finish up
