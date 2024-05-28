@@ -8,6 +8,7 @@ import climage
 
 import typer
 from typing_extensions import Annotated
+app = typer.Typer(pretty_exceptions_enable=False)
 
 from utils import load_world_tileset, load_tile_imgs
 
@@ -96,7 +97,7 @@ def add_new_tile(raw_img_data, tile_folder):
     imgname = ""
     # The current highest tile ID, + 1 for the new tile
     new_tile_nr = sorted([int(n.split('.')[0]) for n in os.listdir(tile_folder)])[-1] + 1
-    imgname = str(new_tile_nr) + ".png"
+    imgname = str(new_tile_nr)
     cv.imwrite("{f}/{i}.png".format(f=tile_folder, i=imgname), raw_img_data)
     return new_tile_nr
 
@@ -120,29 +121,52 @@ def build_section_ids(world_section, tileset, tile_size, specified_tiles, tile_f
 
     unknown_imgs = [] 
     skip_section = False
+    print(world_section.shape)
+    print(section_numbered.shape)
+    print(section_numbered)
+    print(np.count_nonzero(section_numbered==-1))
     for y in range(section_numbered.shape[0]):
         for x in range(section_numbered.shape[0]):
             if section_numbered[y][x] == -1:
                 current_subsection = world_section[(y*tile_size):(y+1)*tile_size, (x*tile_size):(x+1)*tile_size]
                 specified_tiles_idx = -1
+                specified_earlier = False
+                # print("cs", current_subsection)
                 # check if file has been manually specified before
+                # print("st", len(specified_tiles[0]), len(specified_tiles[1]))
                 for image_idx in range(len(specified_tiles[0])):
-                    if np.array_equal(specified_tiles[0][image_idx], current_subsection): #compare image with current subsection
+                    # print(specified_tiles[0][image_idx])
+                    # print(current_subsection.shape)
+                    
+                    if specified_tiles[0][image_idx] == hash(str(current_subsection)): #compare image with current subsection
+                        print("match: ", image_idx)
                         specified_tiles_idx = specified_tiles[1][image_idx] # get matching manually set tile number
+                        print(climage.convert_array(cv.cvtColor(current_subsection, cv.COLOR_BGR2RGB), is_unicode=True) )
+                        specified_earlier = True
+                        # print("===============")
+                    else:
+                        # print("no maatch")
+                        pass
+                   
 
-                if specified_tiles_idx != -1:
-                    section_numbered[y][x] = specified_tiles[1][specified_tiles_idx]
+                if specified_earlier:
+                    print("specified earlier")
+                    print(specified_tiles_idx)
+                    section_numbered[y][x] = specified_tiles_idx
                 elif not skip_section:
+                    print("new tile")
+                    
                     unknown_imgs.append(current_subsection)
                     output = climage.convert_array(cv.cvtColor(world_section, cv.COLOR_BGR2RGB), is_unicode=True) 
                     print(output)
-                    output = climage.convert_array(cv.cvtColor(unknown_imgs[-1], cv.COLOR_BGR2RGB), is_unicode=True) 
-                    # prints output on console. 
+                    output = climage.convert_array(cv.cvtColor(current_subsection, cv.COLOR_BGR2RGB), is_unicode=True) 
                     print(output)
+                    print("(you might need to scroll up)")
                     tile_nr = input("\nPlease type number of the tile to use here (without file extension e.g. type '1' if you want '1.png').\n" +
                                     "Leave empty if you want to ignore this tile. Type 'skip' (or 's') to ignore all unknown tiles in this section \n" +
                                     "Type 'new' (or 'n') to add the currently shown tile as a new image to the tileset: ").lower()
                     print(tile_nr)
+                    # ask to link unknown tile to existing tile
                     while not (tile_nr == "" or tile_nr.isdigit() or tile_nr=="skip" or tile_nr=="s" or tile_nr=="new" or tile_nr=="n"):
                         tile_nr = input("Wrong tilename. \n Please try again:")
                     
@@ -150,7 +174,7 @@ def build_section_ids(world_section, tileset, tile_size, specified_tiles, tile_f
                     if not ((tile_nr == "" or tile_nr == "-1") or (tile_nr=="skip" or tile_nr=="s") or (tile_nr=="new" or tile_nr=="n")):
                         if validate_supplied_tile(tile_nr, tile_folder, tile_size):
                             section_numbered[y][x] = int(tile_nr)
-                            specified_tiles[0].append(current_subsection)
+                            specified_tiles[0].append(hash(str(current_subsection)))
                             specified_tiles[1].append(int(tile_nr))
                         else:
                             print("Weird input!")
@@ -158,27 +182,36 @@ def build_section_ids(world_section, tileset, tile_size, specified_tiles, tile_f
                         if (tile_nr == "" or tile_nr == "-1"):
                             print("Ignored current tile")
                             section_numbered[y][x] = -1
-                            specified_tiles[0].append(current_subsection)
+                            specified_tiles[0].append(hash(str(current_subsection)))
                             specified_tiles[1].append(-1)
                         elif (tile_nr=="skip" or tile_nr=="s"):
                             print("Skipping all unknown tiles in section")
                             section_numbered[y][x] = -1
-                            specified_tiles[0].append(current_subsection)
+                            specified_tiles[0].append(hash(str(current_subsection)))
                             specified_tiles[1].append(-1)
                             skip_section = True
                         elif (tile_nr=="new" or tile_nr=="n"):
                             print("Adding extra tile missing from original tileset...")                            
-                            specified_tiles[0].append(current_subsection)
+                            specified_tiles[0].append(hash(str(current_subsection)))
                             specified_tiles[1].append(add_new_tile(current_subsection, tile_folder))
 
                 elif skip_section==True:
-                    section_numbered[y][x] = -1
-                    specified_tiles[0].append(current_subsection)
-                    specified_tiles[1].append(-1)
+                    print("skip section")
+                    already_in_st = False
+                    for image_idx in range(len(specified_tiles[0])):
+                        if specified_tiles[0][image_idx] == hash(str(current_subsection)):
+                            specified_tiles_idx = specified_tiles[1][image_idx]
+                            already_in_st = True
+                    if not already_in_st:
+                        specified_tiles[0].append(hash(str(current_subsection)))
+                        specified_tiles[1].append(-1)
+                    if already_in_st:
+                        section_numbered[y][x] = specified_tiles_idx
+
                 else:
                     print("\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/")
 
-    print(unknown_imgs)
+    # print(unknown_imgs)
     return section_numbered
 
 def add_sect_to_dict(section_numbered, neighbourdict):
@@ -205,6 +238,8 @@ def add_sect_to_dict(section_numbered, neighbourdict):
                 neighbourdict[selfTile]["left"].add(str(section_numbered[row][col-1]))
 
 
+
+@app.command()
 def tileNBdetect(tile_folder: Annotated[str, typer.Argument(help="The folder containing all separate tile images.")],
                  world_name: Annotated[str, typer.Argument(help="The image file containing the original world from which neighbor rules should be inferred.")],
                  sections_folder: Annotated[str, typer.Argument(help="The folder in which all separate world sections extracted from the world image file should be saved.")],
@@ -248,10 +283,14 @@ def tileNBdetect(tile_folder: Annotated[str, typer.Argument(help="The folder con
 
 
 if __name__=="__main__":
-    typer.run(tileNBdetect)
-
+    # typer.run(tileNBdetect)
+    app()
 
 """
+BUGS:
+encountering tile newly added during neighbour detecting
+
+
 TODO:
 1. Add neighbor weights support?
 

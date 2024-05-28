@@ -1,9 +1,23 @@
-from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QWidget, QFormLayout, QTabWidget, QFileDialog, QCheckBox, QLabel, QLineEdit
+from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QWidget, QFormLayout, QTabWidget, QFileDialog, QCheckBox, QLabel, QLineEdit, QProgressBar
+from PyQt6.QtCore import QThread, pyqtSignal
 from os import getcwd
 
-from tileGenerator import tileGen
+from tileExtraction import TileExtractor
 from tileNeighbourDetector import tileNBdetect
 from wavecollapser_placeholder import waveCollapse
+
+class Worker(QThread):
+    progress_updated = pyqtSignal(int)
+
+    def __init__(self, task):
+        super().__init__()
+        self.task = task
+
+    def run(self):
+        self.task.run(self.report_progress)
+
+    def report_progress(self, progress):
+        self.progress_updated.emit(progress)
 
 # Create the app's main window
 class Window(QMainWindow):
@@ -54,7 +68,6 @@ class Tabs(QWidget):
         self.pushButton1.clicked.connect(lambda: self.Browser(file_filter="Image file (*.png *.bmp *.tiff *.jpg *.jpeg)", button_caption="Open Tileset", input_field=self.inputfilename))
         self.tab1_layout.addWidget(self.pushButton1)
 
-
         self.tileoutputfolder = QLineEdit()
         self.tab1_layout.addRow(self.tr("Output tileset folder:"), self.tileoutputfolder)    
 
@@ -81,22 +94,19 @@ class Tabs(QWidget):
         # Grid width
         self.gridSize = QLineEdit()
         self.tab1_layout.addRow(self.tr("Grid width in px:"), self.gridSize)
+
+        self.progress_bar1 = QProgressBar(self)
+        self.tab1_layout.addWidget(self.progress_bar1)
         
         self.autoDetectToggle()
 
-        # Set tilesizepx to correct value, and to None if no value is filled in.
-        tileSize = int(self.tileSize.text()) if len(self.tileSize.text()) > 0 else None
-        gridOffsetXpx = int(self.gridOffsetX.text()) if len(self.gridOffsetX.text()) > 0 else None
-        gridOffsetYpx = int(self.gridOffsetY.text()) if len(self.gridOffsetY.text()) > 0 else None
-        gridSize = int(self.gridSize.text()) if len(self.gridSize.text()) > 0 else None
-
         # Execute button
         self.pushButtonGo1 = QPushButton("Extract tiles from tileset")
-        
-        self.pushButtonGo1.clicked.connect(lambda: tileGen(filename_path=self.inputfilename.text(), output_path=self.tileoutputfolder.text() , tile_size=tileSize, grid_offset_x=gridOffsetXpx, grid_offset_y=gridOffsetYpx, grid_size=gridSize))
+        self.worker1 = Worker(TileExtractor())
+        self.pushButtonGo1.clicked.connect(self.start_tile_extractor)
+        self.worker1.progress_updated.connect(self.update_progress_bar1)
         self.tab1_layout.addWidget(self.pushButtonGo1)
         self.tab1.setLayout(self.tab1_layout)
-
 
         # Create Tab 2: determining the rules of the world by matching tileset in world
         self.tab2_layout = QFormLayout(self.tab2)
@@ -205,6 +215,29 @@ class Tabs(QWidget):
         self.gridOffsetX.setEnabled(not value)
         self.gridOffsetY.setEnabled(not value)
         self.gridSize.setEnabled(not value)
+
+    def start_tile_extractor(self):
+        # Set tilesizepx to correct value, and to None if no value is filled in.
+        tileSize = int(self.tileSize.text()) if len(self.tileSize.text()) > 0 else None
+        gridOffsetXpx = int(self.gridOffsetX.text()) if len(self.gridOffsetX.text()) > 0 else None
+        gridOffsetYpx = int(self.gridOffsetY.text()) if len(self.gridOffsetY.text()) > 0 else None
+        gridSize = int(self.gridSize.text()) if len(self.gridSize.text()) > 0 else None
+
+        filename_path = self.inputfilename.text()
+        tile_output_folder = self.tileoutputfolder.text()
+
+        self.worker1.task.filename_path = filename_path
+        self.worker1.task.output_path = tile_output_folder
+        self.worker1.task.tile_size = tileSize
+        self.worker1.task.grid_offset_x = gridOffsetXpx
+        self.worker1.task.grid_offset_y = gridOffsetYpx
+        self.worker1.task.grid_size = gridSize
+
+        self.worker1.start()
+    
+    def update_progress_bar1(self, value):
+        print("Progress of update bar:", value)
+        self.progress_bar1.setValue(value)
 
 
 if __name__ == "__main__":
