@@ -107,9 +107,9 @@ class TileExtractor:
 
         # For all contours, cut out tile
         for c in tqdm(contours):
+            # Progress report
             n_contours_done += 1
             self.progress = round(100 * (n_contours_done / len(contours)))
-            print("Progress of worker:", self.progress)
             update_callback(self.progress)
 
             maxX, maxY = -1, -1
@@ -168,6 +168,7 @@ class TileExtractor:
 
     def run(self, update_callback):
         self.is_running = True
+
         #load tileset
         tileset = load_world_tileset(self.filename_path)
 
@@ -182,8 +183,10 @@ class TileExtractor:
             self.separate_grid(tileset, self.output_path, update_callback)
         else:
             self.fixed_offset_extraction(tileset, self.output_path, self.tile_size, self.grid_offset_x, self.grid_offset_y, self.grid_size)
+            
         self.is_running = False
 
+# This part is to make sure the script can still be called separately without the UI.
 def main(
         filename_path: Annotated[str, typer.Argument(help="The filename of the tileset as a .png (or other image file).")],
         output_path: Annotated[str, typer.Argument(help="The folder name in which the tileset should be extracted as separate image files.")],
@@ -197,7 +200,7 @@ def main(
     def update_callback(progress):
         pass
         # This is an empty function to make sure the gui can properly connect and pass its own callback function
-        # print(f"Tile extraction progress: {progress}%") # Optional extra report if you don't like tqdm
+        # print(f"Tile extraction progress: {progress}%") # Optional (extra) report if you don't like tqdm
     tileExtractor.run(update_callback)
 
 if __name__=="__main__":

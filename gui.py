@@ -3,8 +3,8 @@ from PyQt6.QtCore import QThread, pyqtSignal
 from os import getcwd
 
 from tileExtraction import TileExtractor
-from tileNeighbourDetector import tileNBdetect
-from wavecollapser_placeholder import waveCollapse
+from tileNeighbourDetector import TileRulesDetector
+from wavecollapser_placeholder import WaveCollapser
 
 class Worker(QThread):
     progress_updated = pyqtSignal(int)
@@ -59,6 +59,8 @@ class Tabs(QWidget):
         self.tabs.addTab(self.tab2,"Tileset rule generator")
         self.tabs.addTab(self.tab3,"Wave collapser")
         
+        ###############################################################################
+
         # Create Tab 1: Extracting the tileset
         self.tab1_layout = QFormLayout(self.tab1)
         self.inputfilename = QLineEdit()
@@ -95,18 +97,24 @@ class Tabs(QWidget):
         self.gridSize = QLineEdit()
         self.tab1_layout.addRow(self.tr("Grid width in px:"), self.gridSize)
 
-        self.progress_bar1 = QProgressBar(self)
-        self.tab1_layout.addWidget(self.progress_bar1)
-        
+        # Initialise toggle correctly
         self.autoDetectToggle()
 
-        # Execute button
+        # Progress bar
+        self.progress_bar1 = QProgressBar(self)
+        self.tab1_layout.addWidget(self.progress_bar1)        
+
+        # Execute button for tile Extraction
         self.pushButtonGo1 = QPushButton("Extract tiles from tileset")
         self.worker1 = Worker(TileExtractor())
         self.pushButtonGo1.clicked.connect(self.start_tile_extractor)
         self.worker1.progress_updated.connect(self.update_progress_bar1)
         self.tab1_layout.addWidget(self.pushButtonGo1)
+
+        # Set layout
         self.tab1.setLayout(self.tab1_layout)
+
+        ###############################################################################
 
         # Create Tab 2: determining the rules of the world by matching tileset in world
         self.tab2_layout = QFormLayout(self.tab2)
@@ -127,7 +135,6 @@ class Tabs(QWidget):
         self.pushButton3.clicked.connect(lambda: self.Browser(file_filter="Image file (*.png *.bmp *.tiff *.jpg *.jpeg)", button_caption="Open World", input_field=self.inputworld))
         self.tab2_layout.addWidget(self.pushButton3)
 
-
         # Selecting world image
         self.outputsections = QLineEdit()
         self.tab2_layout.addRow(self.tr("Output folder for world sections:"), self.outputsections)    
@@ -144,12 +151,20 @@ class Tabs(QWidget):
         self.pushButton4.clicked.connect(lambda: self.Browser(file_filter="JSON file(*.json)", button_caption="Write to ruleset", input_field=self.outputneighborrules))
         self.tab2_layout.addWidget(self.pushButton4)
 
+        # Progress bar
+        self.progress_bar2 = QProgressBar(self)
+        self.tab2_layout.addWidget(self.progress_bar2)
+
+        # Execute button
         self.pushButtonGo2 = QPushButton("Detect tile neighbor ruleset")
-        self.pushButtonGo2.clicked.connect(lambda: tileNBdetect(tile_folder=self.tilesetfolder.text(), world_name=self.inputworld.text(), sections_folder=self.outputsections.text(), output_file=self.outputneighborrules.text()))
+        self.worker2 = Worker(TileRulesDetector())
+        self.pushButtonGo2.clicked.connect(self.start_tile_rules_detector)
+        self.worker2.progress_updated.connect(self.update_progress_bar2)
         self.tab2_layout.addWidget(self.pushButtonGo2)
 
         self.tab2.setLayout(self.tab2_layout)
         
+        ###############################################################################
         
         # Create Tab 3: Wave collapse the world
         self.tab3_layout = QFormLayout(self.tab3)
@@ -188,10 +203,19 @@ class Tabs(QWidget):
 
         self.visualGenerationToggle = QCheckBox("Show live world generation. Note: this may result in slower generation,\nespecially when the generator gets 'stuck' in a local problem.")
         self.tab3_layout.addWidget(self.visualGenerationToggle)
-        
+
+        # Progress bar
+        self.progress_bar3 = QProgressBar(self)
+        self.tab3_layout.addWidget(self.progress_bar3)
+
+        # Execute button
         self.pushButtonGo3 = QPushButton("Generate World")
-        self.pushButtonGo3.clicked.connect(lambda: waveCollapse(tileset_folder=self.tilesetfolder2.text(), neighbor_rules_file=self.inputneighborrules.text(), xSize=int(self.worldSizeX.text()), ySize=int(self.worldSizeY.text()), show_generation=self.visualGenerationToggle.isChecked()))
+        self.worker3 = Worker(WaveCollapser())
+        self.pushButtonGo3.clicked.connect(self.start_wave_collapser)
+        self.worker3.progress_updated.connect(self.update_progress_bar3)
         self.tab3_layout.addWidget(self.pushButtonGo3)
+        
+        ###############################################################################
 
         # Finish up
         self.tab3.setLayout(self.tab3_layout)
@@ -216,28 +240,52 @@ class Tabs(QWidget):
         self.gridOffsetY.setEnabled(not value)
         self.gridSize.setEnabled(not value)
 
+    # Start functions
     def start_tile_extractor(self):
         # Set tilesizepx to correct value, and to None if no value is filled in.
         tileSize = int(self.tileSize.text()) if len(self.tileSize.text()) > 0 else None
         gridOffsetXpx = int(self.gridOffsetX.text()) if len(self.gridOffsetX.text()) > 0 else None
         gridOffsetYpx = int(self.gridOffsetY.text()) if len(self.gridOffsetY.text()) > 0 else None
         gridSize = int(self.gridSize.text()) if len(self.gridSize.text()) > 0 else None
-
         filename_path = self.inputfilename.text()
         tile_output_folder = self.tileoutputfolder.text()
 
-        self.worker1.task.filename_path = filename_path
-        self.worker1.task.output_path = tile_output_folder
-        self.worker1.task.tile_size = tileSize
-        self.worker1.task.grid_offset_x = gridOffsetXpx
-        self.worker1.task.grid_offset_y = gridOffsetYpx
-        self.worker1.task.grid_size = gridSize
+        self.worker1.task.update_config(filename_path, tile_output_folder, tileSize, gridOffsetXpx, gridOffsetYpx, gridSize)
 
         self.worker1.start()
+
+    def start_tile_rules_detector(self):
+        tile_folder = self.tilesetfolder.text()
+        world_name = self.inputworld.text()
+        sections_folder = self.outputsections.text()
+        output_file = self.outputneighborrules.text()
+        
+        self.worker2.task.update_config(tile_folder, world_name, sections_folder, output_file)
+
+        self.worker2.start()
+
+    def start_wave_collapser(self):
+        tile_folder = self.tilesetfolder2.text()
+        neighbour_rules_file = self.inputneighborrules.text()
+        xSize = int(self.worldSizeX.text())
+        ySize = int(self.worldSizeY.text())
+        show_generation = self.visualGenerationToggle.isChecked()
+        
+        self.worker3.task.update_config(tile_folder, neighbour_rules_file, xSize, ySize, show_generation)
+
+        print("Le ciel est bleu")
+
+        self.worker3.start()
     
+    # Progress bar update functions
     def update_progress_bar1(self, value):
-        print("Progress of update bar:", value)
         self.progress_bar1.setValue(value)
+
+    def update_progress_bar2(self, value):
+        self.progress_bar2.setValue(value)
+
+    def update_progress_bar3(self, value):
+        self.progress_bar3.setValue(value)
 
 
 if __name__ == "__main__":
