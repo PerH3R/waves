@@ -294,15 +294,16 @@ class TileRulesDetector:
         for tile in neighbourdict.keys():
             for direction in neighbourdict[tile].keys():
                 neighbourdict[tile][direction] = list(neighbourdict[tile][direction])
-        if not output_file.lower().endswith(".json"):
-            output_file += ".json"
-        with open(output_file, "w") as f:
+        if not self.output_file.lower().endswith(".json"):
+            self.output_file += ".json"
+        with open(self.output_file, "w") as f:
             json.dump(neighbourdict, f, indent=4)
 
         self.is_running = False
 
 
 # This part is to make sure the script can still be called separately without the UI.
+@app.command()
 def main(
         tile_folder: Annotated[str, typer.Argument(help="The folder containing all separate tile images.")],
         world_name: Annotated[str, typer.Argument(help="The image file containing the original world from which neighbor rules should be inferred.")],
@@ -318,7 +319,8 @@ def main(
     tileRulesDetector.run(update_callback)
 
 if __name__=="__main__":
-    typer.run(main)
+    # typer.run(main)
+    app()
 
 """
 BUGS:
