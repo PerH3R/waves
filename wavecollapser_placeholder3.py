@@ -3,7 +3,7 @@ import cv2 as cv
 import json
 import copy
 import numpy as np
-from random import choice
+from random import choice, random
 from PIL import Image
 
 import typer
@@ -149,6 +149,7 @@ class World:
         to_propagate = [(x, y)]
         while to_propagate:
             print("That's not a sunflower, that's a susflower!!!!")
+            self.debug_terminal_print_entropy()
             cx, cy = to_propagate.pop()
             if self.get_tile(cx, cy).get_tile_id() == "-1":
                 current_tiles = self.get_tile(cx, cy).get_possibilities()
@@ -183,45 +184,6 @@ class World:
                     self.world[nx][ny].set_possibilities(new_possible_neighbor_tiles)
                     to_propagate.append((nx, ny))
 
-
-
-        # for x in range(self.xSize):
-        #     for y in range(self.ySize):
-        #         if self.world[x][y].get_tile_id() != "-1":
-        #             self.world[x][y].set_possibilities(set())
-        #             poten_tile_ids = [self.world[x][y].get_tile_id()]
-        #         else:
-        #             poten_tile_ids = self.world[x][y].get_possibilities()
-
-        #         if y-1 >= 0 : # if above is in bounds
-        #             # up
-        #             up_possibilities = set()
-        #             for tile in poten_tile_ids:
-        #                 up_possibilities.update(self.get_nb_possibilities(tile, "up"))
-        #             # print("For up at x:", x, "y:", y, "we have:", self.world[x][y-1].get_possibilities(), "and", up_possibilities)
-        #             self.world[x][y-1].set_possibilities(self.world[x][y-1].get_possibilities() & up_possibilities)
-        #         if x+1 < self.xSize:
-        #             # right
-        #             right_possibilities = set()
-        #             for tile in poten_tile_ids:
-        #                 right_possibilities.update(self.get_nb_possibilities(tile, "right"))
-        #             # print("For right at x:", x, "y:", y, "we have:", self.world[x+1][y].get_possibilities(), "and", right_possibilities)
-        #             self.world[x+1][y].set_possibilities(self.world[x+1][y].get_possibilities() & right_possibilities)
-        #         if y+1 < self.ySize:
-        #             # down
-        #             down_possibilities = set()
-        #             for tile in poten_tile_ids:
-        #                 down_possibilities.update(self.get_nb_possibilities(tile, "down"))
-        #             # print("For down at x:", x, "y:", y, "we have:", self.world[x][y+1].get_possibilities(), "and", down_possibilities)
-        #             self.world[x][y+1].set_possibilities(self.world[x][y+1].get_possibilities() & down_possibilities)
-        #         if x-1 >= 0:
-        #             # left
-        #             left_possibilities = set()
-        #             for tile in poten_tile_ids:
-        #                 left_possibilities.update(self.get_nb_possibilities(tile, "left"))
-        #             # print("For left at x:", x, "y:", y, "we have:", self.world[x-1][y].get_possibilities(), "and", left_possibilities)
-        #             self.world[x-1][y].set_possibilities(self.world[x-1][y].get_possibilities() & left_possibilities)
-
     
     # Decrease possibilities for all tiles. This is done by checking
     # the possibilities of the neighbours and intersecting them with
@@ -252,7 +214,52 @@ class World:
                         # left
                         self.world[x-1][y].set_possibilities(self.world[x-1][y].get_possibilities() & 
                             self.get_nb_possibilities(self.world[x][y].get_tile_id(), "left"))
-                        
+
+
+    def generate(self, tile_imgs, update_callback, show_generation):
+        self.progress = self.progress_calculator()
+        update_callback(self.progress)
+        # Main generating loop
+        while(not self.done_check()):
+            print("what are you doing???")
+            # If stuck, return and try another config
+            if self.stuck_check():
+                print("We are stuck!")
+            # List of tiles we can choose from with lowest entropy
+            candidate_tiles = self.find_candidate_tiles()
+        
+            print("Just smelling a sunflower")
+
+            # Keep trying tiles and removing them, so if it doesn't work out,
+            # we try another
+            chosen_tile = choice(list(candidate_tiles))
+            candidate_tiles.remove(chosen_tile)
+
+            # Get all possible tile IDs that can be placed on selected tile
+            candidate_tile_ids = chosen_tile.get_possibilities()
+
+            if len(candidate_tile_ids) > 0:
+                # Once again, chose a tile ID and remove it so we do not try
+                # it again if it doesn't work out
+                chosen_tile_id = choice(list(candidate_tile_ids))
+                candidate_tile_ids.remove(chosen_tile_id)
+
+                # Set tile ID
+                print("Setting tile id to:", chosen_tile_id)
+                chosen_tile.set_tile_id(chosen_tile_id)
+
+                if show_generation:
+                    print("Current world")
+                    self.show_image(tile_imgs)
+                    self.debug_terminal_print()
+                    print("Current entropy")
+                    self.debug_terminal_print_entropy()
+                    print()
+
+                self.aggressive_collapse(chosen_tile.x, chosen_tile.y)
+                
+            else:
+                print("No more ids available for candidate tile, choosing another")
                         
 
     def create_image(self, tile_imgs):
@@ -422,77 +429,13 @@ class WaveCollapser:
             tile_neighbours = json.load(file)
             return tile_neighbours       
 
-    def generate(self, world, tile_imgs, update_callback):
-        self.progress = world.progress_calculator()
-        update_callback(self.progress)
-        # Main generating loop
-        while(True):
-            print("what are you doing???")
-            # If stuck, return and try another config
-            if world.stuck_check():
-                print("We are stuck!")
-                return None
-            # List of tiles we can choose from with lowest entropy
-            candidate_tiles = world.find_candidate_tiles()
-        
-            while(True):
-                print("Just smelling a sunflower")
-                if world == None:
-                    print("Hard error bro")
-                # When done, propagate world upwards out of recursion
-                if world.done_check():
-                    return world
-                # If there are no candidate tiles left, we are stuck
-                if (len(candidate_tiles) == 0):
-                    print("No more candidate tiles in this branch, going back")
-                    return None
-                # Keep trying tiles and removing them, so if it doesn't work out,
-                # we try another
-                chosen_tile = choice(list(candidate_tiles))
-                candidate_tiles.remove(chosen_tile)
-
-                # Get all possible tile IDs that can be placed on selected tile
-                candidate_tile_ids = chosen_tile.get_possibilities()
-
-                if len(candidate_tile_ids) > 0:
-                    # Once again, chose a tile ID and remove it so we do not try
-                    # it again if it doesn't work out
-                    chosen_tile_id = choice(list(candidate_tile_ids))
-                    candidate_tile_ids.remove(chosen_tile_id)
-
-                    # Set tile ID
-                    print("Setting tile id to:", chosen_tile_id)
-                    chosen_tile.set_tile_id(chosen_tile_id)
-                    world.aggressive_collapse(chosen_tile.x, chosen_tile.y)
-                    
-                    if self.show_generation:
-                        print("Current world")
-                        world.show_image(tile_imgs)
-                        world.debug_terminal_print()
-                        print("Current entropy")
-                        world.debug_terminal_print_entropy()
-                        print()
-
-                    # Recursion: try to generate further with the current world
-                    done_world = self.generate(copy.deepcopy(world), tile_imgs, update_callback)
-                    # Propagate world out of recursion if we are done
-                    if done_world != None and done_world.done_check():
-                        print("We are done")
-                        world = done_world
-                    
-                    # Undo tile
-                    chosen_tile.reset_tile()
-                    world.aggressive_collapse(chosen_tile.x, chosen_tile.y)
-                else:
-                    print("No more ids available for candidate tile, choosing another")
-
     def run(self, update_callback):
         self.is_running = True
 
         tile_imgs, tile_size = load_tile_imgs(self.tile_folder)
         neighbour_rules = self.load_neighbours_json(self.neighbour_rules_file)
         world = World(self.xSize, self.ySize, neighbour_rules, tile_size)
-        world = self.generate(world, tile_imgs, update_callback)
+        world.generate(tile_imgs, update_callback, self.show_generation)
         world.create_image(tile_imgs)
 
         self.is_running = False
@@ -506,9 +449,11 @@ def main(
     neighbour_rules_file: Annotated[str, typer.Argument(help="The JSON file containing the rules of what tiles can have which neighbours.")],
     x_size: Annotated[int, typer.Argument(help="The horizontal dimension of the generated world in number of tiles.")],
     y_size: Annotated[int, typer.Argument(help="The vertical dimension of the generated world in number of tiles.")],
-    show_generation: Annotated[bool, typer.Argument(help="Show the world being generated. Note: this may result in slower generation, especially when the generator gets 'stuck' in a local problem.")]
+    show_generation: Annotated[bool, typer.Argument(help="Show the world being generated. Note: this may result in slower generation, especially when the generator gets 'stuck' in a local problem.")],
+    # seed: Annotated[int, typer.Argument(help="The seed to use during random generation")]
 ):
     print(show_generation)
+    # print(seed)
     waveCollapser = WaveCollapser()
     waveCollapser.update_config(tile_folder, neighbour_rules_file, x_size, y_size, show_generation)
     def update_callback(progress):
