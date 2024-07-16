@@ -5,6 +5,7 @@ import copy
 import numpy as np
 from random import choice
 from PIL import Image
+from multiprocessing import Process, Pool
 
 import typer
 from typing_extensions import Annotated
@@ -12,10 +13,54 @@ from typing_extensions import Annotated
 from utils import load_tile_imgs
 
 
+class Tile:
+    def __init__(self, x: int, y: int, all_tile_ids: list):
+        self.x = x
+        self.y = y
+        self.entropy = len(all_tile_ids)
+
+        self.possibilities = set(copy.deepcopy(all_tile_ids))
+        self.tile_id = "-1" #positive numbers represent a tile ID
+
+    # Returns the entropy of the tile.
+    def get_entropy(self) -> int:
+        return self.entropy
+    
+    # Changes the entropy to the number of possible tiles.
+    def update_entropy(self) -> None:
+        self.entropy = len(self.possibilities)
+    
+    # Returns the ids of the tiles that could be placed here.
+    def get_possibilities(self) -> set:
+        return self.possibilities
+    
+    # Set the possibilities of the tile.
+    def set_possibilities(self, new_possibilities: list) -> None:
+        self.possibilities = set(copy.deepcopy(new_possibilities))
+        self.update_entropy()
+    
+    # Returns the type id of the tile.
+    def get_tile_id(self) -> str:
+        return self.tile_id
+
+    # Set the type id of the tile.
+    def set_tile_id(self, id: str) -> None:
+        self.tile_id = id
+        self.possibilities = set()
+        self.entropy = 0
+
+    def reset_tile(self) -> None:
+        self.tile_id = "-1"
+
+    # Returns the position of the tile in the world.
+    def get_position(self) -> tuple[int, int]:
+        return self.x, self.y
+
+
 class World:
-    def __init__(self, xSize, ySize, neighbour_rules, tile_size):
-        self.xSize = int(xSize)
-        self.ySize = int(ySize)
+    def __init__(self, xSize: int, ySize: int, neighbour_rules: dict, tile_size: int) -> None:
+        self.xSize = xSize
+        self.ySize = ySize
         self.world_size = xSize * ySize
         self.history = [] # Stack
         self.neighbour_rules = neighbour_rules
@@ -23,7 +68,7 @@ class World:
         self.create_new_world(self.xSize, self.ySize)
     
     # Creates an empty world
-    def create_new_world(self, xSize, ySize):
+    def create_new_world(self, xSize: int, ySize: int) -> None:
         world = []
         for x in range(xSize):
             world.append([])
@@ -33,7 +78,7 @@ class World:
         self.world = world
     
     # Finds the candidate tiles with the lowest entropy
-    def find_candidate_tiles(self):
+    def find_candidate_tiles(self) -> list:
         lowest_entropy = len(self.neighbour_rules.keys())
         candidate_tiles = []
         for x in range(self.xSize):
@@ -53,7 +98,7 @@ class World:
         return candidate_tiles
     
     
-    def find_rounded_candidate_tiles(self):
+    def find_rounded_candidate_tiles(self) -> list:
         lowest_entropy = len(self.neighbour_rules.keys())
         candidate_tiles = [[],[],[],[],[]]
         
@@ -103,61 +148,39 @@ class World:
                         candidate_tiles[current_neighbours].append(tile)
 
         return candidate_tiles
-        
-    #checks if given a certain tile id on a position, no neighbour gets no viable possibilities
-    # TODO: remove?
-    def check_nb_viable(self, x, y, id):
-        if (y-1 >= 0): # if above is in bounds
-            # up
-            if (len(self.world[x][y-1].get_possibilities() & self.get_nb_possibilities(id, "up")) <= 0) and self.world[x][y-1].get_tile_id() == "-1":
-                return False
-        if (x+1 < self.xSize):
-            # right
-            if (len(self.world[x+1][y].get_possibilities() & self.get_nb_possibilities(id, "right")) <= 0) and self.world[x+1][y].get_tile_id() == "-1":
-                return False
-        if (y+1 < self.ySize):
-            # down
-            if (len(self.world[x][y+1].get_possibilities() & self.get_nb_possibilities(id, "down")) <= 0) and self.world[x][y+1].get_tile_id() == "-1":
-                return False
-        if (x-1 >= 0):
-            # left
-            if (len(self.world[x-1][y].get_possibilities() & self.get_nb_possibilities(id, "left")) <= 0) and self.world[x-1][y].get_tile_id() == "-1":
-                return False
-        return True
     
 
-    def reset_possibilities(self):
+    def reset_possibilities(self) -> None:
         for x in range(self.xSize):
             for y in range(self.ySize):
                 if self.world[x][y].get_tile_id() == "-1":
                     self.world[x][y].set_possibilities(list(self.neighbour_rules.keys()))
 
         
-    def get_neighbors(self, x, y):
-        neighbors = []
-        if x > 0: neighbors.append((x-1, y))
-        if x < self.xSize - 1: neighbors.append((x+1, y))
-        if y > 0: neighbors.append((x, y-1))
-        if y < self.ySize - 1: neighbors.append((x, y+1))
-        return neighbors
+    def get_neighbours(self, x: int, y: int) -> list:
+        neighbours = []
+        if x > 0: neighbours.append((x-1, y))
+        if x < self.xSize - 1: neighbours.append((x+1, y))
+        if y > 0: neighbours.append((x, y-1))
+        if y < self.ySize - 1: neighbours.append((x, y+1))
+        return neighbours
             
 
-    def aggressive_collapse(self, x, y):
+    def aggressive_collapse(self, x: int, y: int) -> None:
         #reset entropy values, needed in case of undo's
         # self.reset_possibilities()
 
         to_propagate = [(x, y)]
         while to_propagate:
-            print("That's not a sunflower, that's a susflower!!!!")
             cx, cy = to_propagate.pop()
             if self.get_tile(cx, cy).get_tile_id() == "-1":
                 current_tiles = self.get_tile(cx, cy).get_possibilities()
             else:
                 current_tiles = [self.get_tile(cx, cy).get_tile_id()]
 
-            neighbors = self.get_neighbors(cx, cy)
+            neighbours = self.get_neighbours(cx, cy)
 
-            for nx, ny in neighbors:
+            for nx, ny in neighbours:
                 if nx < cx:
                     direction = 'left'
                 elif nx > cx:
@@ -167,95 +190,81 @@ class World:
                 else:
                     direction = 'down'
 
-                possible_neighbor_tiles = self.world[nx][ny].get_possibilities()
-                new_possible_neighbor_tiles = set()
+                possible_neighbour_tiles = self.world[nx][ny].get_possibilities()
+                new_possible_neighbour_tiles = set()
 
                 # Iterate through all possible tiles at the current position
                 for tile in current_tiles:
-                    # Iterate through all possible tiles for the neighbor position
-                    for neighbor_tile in possible_neighbor_tiles:
-                        # Check if the neighbor tile can be a valid neighbor to the current tile
-                        if neighbor_tile in self.get_nb_possibilities(tile, direction):
-                            new_possible_neighbor_tiles.add(neighbor_tile)  # Add the neighbor tile to the new set                 
+                    # Iterate through all possible tiles for the neighbour position
+                    for neighbour_tile in possible_neighbour_tiles:
+                        # Check if the neighbour tile can be a valid neighbour to the current tile
+                        if neighbour_tile in self.get_nb_possibilities(tile, direction):
+                            new_possible_neighbour_tiles.add(neighbour_tile)  # Add the neighbour tile to the new set                 
                             
 
-                if new_possible_neighbor_tiles != possible_neighbor_tiles:
-                    self.world[nx][ny].set_possibilities(new_possible_neighbor_tiles)
+                if new_possible_neighbour_tiles != possible_neighbour_tiles:
+                    self.world[nx][ny].set_possibilities(new_possible_neighbour_tiles)
                     to_propagate.append((nx, ny))
 
+    def collapse_tile(self, neighbour_tile, self_tile_possibilities) -> None:
+        neighbour_tile.set_possibilities(neighbour_tile.get_possibilities() & self_tile_possibilities)
 
-
-        # for x in range(self.xSize):
-        #     for y in range(self.ySize):
-        #         if self.world[x][y].get_tile_id() != "-1":
-        #             self.world[x][y].set_possibilities(set())
-        #             poten_tile_ids = [self.world[x][y].get_tile_id()]
-        #         else:
-        #             poten_tile_ids = self.world[x][y].get_possibilities()
-
-        #         if y-1 >= 0 : # if above is in bounds
-        #             # up
-        #             up_possibilities = set()
-        #             for tile in poten_tile_ids:
-        #                 up_possibilities.update(self.get_nb_possibilities(tile, "up"))
-        #             # print("For up at x:", x, "y:", y, "we have:", self.world[x][y-1].get_possibilities(), "and", up_possibilities)
-        #             self.world[x][y-1].set_possibilities(self.world[x][y-1].get_possibilities() & up_possibilities)
-        #         if x+1 < self.xSize:
-        #             # right
-        #             right_possibilities = set()
-        #             for tile in poten_tile_ids:
-        #                 right_possibilities.update(self.get_nb_possibilities(tile, "right"))
-        #             # print("For right at x:", x, "y:", y, "we have:", self.world[x+1][y].get_possibilities(), "and", right_possibilities)
-        #             self.world[x+1][y].set_possibilities(self.world[x+1][y].get_possibilities() & right_possibilities)
-        #         if y+1 < self.ySize:
-        #             # down
-        #             down_possibilities = set()
-        #             for tile in poten_tile_ids:
-        #                 down_possibilities.update(self.get_nb_possibilities(tile, "down"))
-        #             # print("For down at x:", x, "y:", y, "we have:", self.world[x][y+1].get_possibilities(), "and", down_possibilities)
-        #             self.world[x][y+1].set_possibilities(self.world[x][y+1].get_possibilities() & down_possibilities)
-        #         if x-1 >= 0:
-        #             # left
-        #             left_possibilities = set()
-        #             for tile in poten_tile_ids:
-        #                 left_possibilities.update(self.get_nb_possibilities(tile, "left"))
-        #             # print("For left at x:", x, "y:", y, "we have:", self.world[x-1][y].get_possibilities(), "and", left_possibilities)
-        #             self.world[x-1][y].set_possibilities(self.world[x-1][y].get_possibilities() & left_possibilities)
-
-    
     # Decrease possibilities for all tiles. This is done by checking
     # the possibilities of the neighbours and intersecting them with
     # the possibilities of the other adjacent neighbours, as well
     # as looking in the dictionary of possibilities.
-    def collapse(self):
+    def collapse(self) -> None:
         #reset entropy values, needed in case of undo's
         self.reset_possibilities()
-                    
+
         #calculate new entropy values
         for x in range(self.xSize):
             for y in range(self.ySize):
                 if self.world[x][y].get_tile_id() != "-1": 
                     self.world[x][y].set_possibilities(set())
+                    processes = []
                     if y-1 >= 0 : # if above is in bounds
                         # up
-                        self.world[x][y-1].set_possibilities(self.world[x][y-1].get_possibilities() & 
-                            self.get_nb_possibilities(self.world[x][y].get_tile_id(), "up"))
+                        processes.append(Process(target=self.collapse_tile, args=(self.world[x][y-1], 
+                                                                             self.get_nb_possibilities(self.world[x][y].get_tile_id(), "up"))
+                                                ))
+                        # self.world[x][y-1].set_possibilities(self.world[x][y-1].get_possibilities() & 
+                        #     self.get_nb_possibilities(self.world[x][y].get_tile_id(), "up"))
+                        self.collapse_tile(self.world[x][y-1], self.get_nb_possibilities(self.world[x][y].get_tile_id(), "up"))
                     if x+1 < self.xSize:
                         # right
-                        self.world[x+1][y].set_possibilities(self.world[x+1][y].get_possibilities() & 
-                            self.get_nb_possibilities(self.world[x][y].get_tile_id(), "right"))
+                        processes.append(Process(target=self.collapse_tile, args=(self.world[x+1][y], 
+                                                                             self.get_nb_possibilities(self.world[x][y].get_tile_id(), "right"))
+                                                ))
+                        # self.world[x+1][y].set_possibilities(self.world[x+1][y].get_possibilities() & 
+                        #     self.get_nb_possibilities(self.world[x][y].get_tile_id(), "right"))
+                        # self.collapse_tile(self.world[x+1][y], self.get_nb_possibilities(self.world[x][y].get_tile_id(), "right"))
                     if y+1 < self.ySize:
                         # down
-                        self.world[x][y+1].set_possibilities(self.world[x][y+1].get_possibilities() & 
-                            self.get_nb_possibilities(self.world[x][y].get_tile_id(), "down"))
+                        processes.append(Process(target=self.collapse_tile, args=(self.world[x][y+1], 
+                                                                             self.get_nb_possibilities(self.world[x][y].get_tile_id(), "down"))
+                                                ))
+                        # self.world[x][y+1].set_possibilities(self.world[x][y+1].get_possibilities() & 
+                        #     self.get_nb_possibilities(self.world[x][y].get_tile_id(), "down"))
+                        # self.collapse_tile(self.world[x][y+1], self.get_nb_possibilities(self.world[x][y].get_tile_id(), "down"))
+
                     if x-1 >= 0:
                         # left
-                        self.world[x-1][y].set_possibilities(self.world[x-1][y].get_possibilities() & 
-                            self.get_nb_possibilities(self.world[x][y].get_tile_id(), "left"))
+                        processes.append(Process(target=self.collapse_tile, args=(self.world[x-1][y], 
+                                                                             self.get_nb_possibilities(self.world[x][y].get_tile_id(), "left"))
+                                                ))
+                        # self.world[x-1][y].set_possibilities(self.world[x-1][y].get_possibilities() & 
+                        #     self.get_nb_possibilities(self.world[x][y].get_tile_id(), "left"))
+                        # self.collapse_tile(self.world[x-1][y], self.get_nb_possibilities(self.world[x][y].get_tile_id(), "left"))
+                    for process in processes:
+                        process.start()
+                    for process in processes:
+                        process.join()
+
                         
                         
 
-    def create_image(self, tile_imgs):
+    def create_image(self, tile_imgs: dict, output_filename: str) -> None:
         new_world_map = Image.new('RGB', (self.xSize*self.tile_size, self.ySize*self.tile_size))
         for x in range(self.xSize):
             for y in range(self.ySize):
@@ -263,11 +272,11 @@ class World:
                     converted_img = cv.cvtColor(tile_imgs[self.world[x][y].get_tile_id()], cv.COLOR_BGR2RGB)
                     tile_img = Image.fromarray(converted_img)
                     new_world_map.paste(tile_img, (x*self.tile_size, y*self.tile_size))
-        new_world_map.save('world.png')
+        new_world_map.save(output_filename)
         print("Saved image!")
         # new_world_map.show()
 
-    def show_image(self, tile_imgs):
+    def show_image(self, tile_imgs: dict) -> None:
         new_world_map = Image.new('RGB', (self.xSize*self.tile_size, self.ySize*self.tile_size))
         for x in range(self.xSize):
             for y in range(self.ySize):
@@ -284,14 +293,14 @@ class World:
 
                 
     # Get the possibilities of the neighbour in a certain direction.
-    def get_nb_possibilities(self, id, direction):
+    def get_nb_possibilities(self, id: str, direction: str) -> set:
         return(set(self.neighbour_rules[id][direction]))
     
 
     # Walk through all tiles and check whether we are stuck.
     # We are stuck when a tile has an id of -1 (empty tile),
     # but the entropy (no. of possible tiles) is equal to 0.
-    def stuck_check(self):
+    def stuck_check(self) -> bool:
         for x in range(self.xSize):
             for y in range(self.ySize):
                 if self.world[x][y].get_tile_id() == "-1" and self.world[x][y].get_entropy() == 0:
@@ -300,7 +309,7 @@ class World:
         return False
     
     # Calculates how far we are currently in generating the world
-    def progress_calculator(self):
+    def progress_calculator(self) -> int:
         n_tiles_left = 0
         for x in range(self.xSize):
             for y in range(self.ySize):
@@ -314,7 +323,7 @@ class World:
     # Walk through all tiles and check whether we are done.
     # We are done when all tiles have an id that is not -1
     # and the entropy is 0.
-    def done_check(self):
+    def done_check(self) -> bool:
         for x in range(self.xSize):
             for y in range(self.ySize):
                 if self.world[x][y].get_tile_id() == "-1" or self.world[x][y].get_entropy() != 0:
@@ -323,21 +332,25 @@ class World:
         return True
     
     # Print all ids in the world in terminal.
-    def debug_terminal_print(self):
+    def debug_terminal_print(self) -> None:
+        output_str = ""
         for y in range(self.ySize):
             for x in range(self.xSize):
-                print(self.world[x][y].get_tile_id(), end="" + '\t')
-            print("\n", end="")
+                output_str += str(self.world[x][y].get_tile_id()) + '\t'
+            output_str += "\n"
+        print(output_str, flush=True)
 
 
-    def debug_terminal_print_entropy(self):
+    def debug_terminal_print_entropy(self) -> None:
+        output_str = ""
         for y in range(self.ySize):
             for x in range(self.xSize):
-                print(self.world[x][y].get_entropy(), end="" + '\t')
-            print("\n", end="")
+                output_str += str(self.world[x][y].get_entropy()) + '\t'
+            output_str +="\n"
+        print(output_str, flush=True)
 
     #checks if all tiles in world are "-1" and thus not set
-    def is_empty(self):
+    def is_empty(self) -> bool:
         for x in range(self.xSize):
             for y in range(self.ySize):
                 if self.world[x][y].get_tile_id() != "-1":
@@ -345,56 +358,12 @@ class World:
         return True
     
     #returns the tile object at x,y
-    def get_tile(self, x, y):     
+    def get_tile(self, x: int, y: int) -> Tile:
         return self.world[x][y]
     
     #sets the tile at x,y to id.
-    def set_tile(self, x, y, id):
+    def set_tile(self, x: int, y: int, id: str) -> None:
         self.world[x][y].set_tile_id(id)
-
-
-class Tile:
-    def __init__(self, x, y, all_tile_ids):
-        self.x = x
-        self.y = y
-        self.entropy = len(all_tile_ids)
-
-        self.possibilities = set(copy.deepcopy(all_tile_ids))
-        self.tile_id = "-1" #positive numbers represent a tile ID
-
-    # Returns the entropy of the tile.
-    def get_entropy(self):
-        return self.entropy
-    
-    # Changes the entropy to the number of possible tiles.
-    def update_entropy(self):
-        self.entropy = len(self.possibilities)
-    
-    # Returns the ids of the tiles that could be placed here.
-    def get_possibilities(self):
-        return self.possibilities
-    
-    # Set the possibilities of the tile.
-    def set_possibilities(self, new_possibilities):
-        self.possibilities = set(copy.deepcopy(new_possibilities))
-        self.update_entropy()
-    
-    # Returns the type id of the tile.
-    def get_tile_id(self):
-        return self.tile_id
-
-    # Set the type id of the tile.
-    def set_tile_id(self, id):
-        self.tile_id = id
-        self.possibilities = set()
-        self.entropy = 0
-
-    def reset_tile(self):
-        self.tile_id = "-1"
-
-    # Returns the position of the tile in the world.
-    def get_position(self):
-        return self.x, self.y
     
 
 class WaveCollapser:
@@ -409,25 +378,25 @@ class WaveCollapser:
         self.show_generation = None
         pass
 
-    def update_config(self, tile_folder, neighbour_rules_file, xSize, ySize, show_generation):
+    def update_config(self, tile_folder: str, neighbour_rules_file: str, xSize: int, ySize: int, output_world_filename: str, show_generation: bool) -> None:
         self.tile_folder = tile_folder
         self.neighbour_rules_file = neighbour_rules_file
         self.xSize = xSize
         self.ySize = ySize
+        self.output_world_filename = output_world_filename
         self.show_generation = show_generation
 
     # Load tile rules
-    def load_neighbours_json(self, filename):
+    def load_neighbours_json(self, filename: str) -> json:
         with open(filename, "r") as file:
             tile_neighbours = json.load(file)
             return tile_neighbours       
 
-    def generate(self, world, tile_imgs, update_callback):
+    def generate(self, world: World, tile_imgs: dict, update_callback: callable) -> None:
         self.progress = world.progress_calculator()
         update_callback(self.progress)
         # Main generating loop
         while(True):
-            print("what are you doing???")
             # If stuck, return and try another config
             if world.stuck_check():
                 print("We are stuck!")
@@ -436,7 +405,6 @@ class WaveCollapser:
             candidate_tiles = world.find_candidate_tiles()
         
             while(True):
-                print("Just smelling a sunflower")
                 if world == None:
                     print("Hard error bro")
                 # When done, propagate world upwards out of recursion
@@ -463,7 +431,8 @@ class WaveCollapser:
                     # Set tile ID
                     print("Setting tile id to:", chosen_tile_id)
                     chosen_tile.set_tile_id(chosen_tile_id)
-                    world.aggressive_collapse(chosen_tile.x, chosen_tile.y)
+                    world.collapse()
+                    # world.aggressive_collapse(chosen_tile.x, chosen_tile.y)
                     
                     if self.show_generation:
                         print("Current world")
@@ -482,21 +451,22 @@ class WaveCollapser:
                     
                     # Undo tile
                     chosen_tile.reset_tile()
-                    world.aggressive_collapse(chosen_tile.x, chosen_tile.y)
+                    world.collapse()
+                    # world.aggressive_collapse(chosen_tile.x, chosen_tile.y)
                 else:
                     print("No more ids available for candidate tile, choosing another")
 
-    def run(self, update_callback):
+    def run(self, update_callback: callable) -> None:
         self.is_running = True
 
         tile_imgs, tile_size = load_tile_imgs(self.tile_folder)
         neighbour_rules = self.load_neighbours_json(self.neighbour_rules_file)
         world = World(self.xSize, self.ySize, neighbour_rules, tile_size)
         world = self.generate(world, tile_imgs, update_callback)
-        world.create_image(tile_imgs)
+        world.create_image(tile_imgs, self.output_world_filename)
 
         self.is_running = False
-                    
+
 app = typer.Typer()
 
 # This part is to make sure the script can still be called separately without the UI.
@@ -506,11 +476,12 @@ def main(
     neighbour_rules_file: Annotated[str, typer.Argument(help="The JSON file containing the rules of what tiles can have which neighbours.")],
     x_size: Annotated[int, typer.Argument(help="The horizontal dimension of the generated world in number of tiles.")],
     y_size: Annotated[int, typer.Argument(help="The vertical dimension of the generated world in number of tiles.")],
+    output_world_filename: Annotated[str, typer.Argument(help="The output filename of the world.")],
     show_generation: Annotated[bool, typer.Argument(help="Show the world being generated. Note: this may result in slower generation, especially when the generator gets 'stuck' in a local problem.")]
-):
+) -> None:
     print(show_generation)
     waveCollapser = WaveCollapser()
-    waveCollapser.update_config(tile_folder, neighbour_rules_file, x_size, y_size, show_generation)
+    waveCollapser.update_config(tile_folder, neighbour_rules_file, x_size, y_size, output_world_filename, show_generation)
     def update_callback(progress):
         pass
         # This is an empty function to make sure the gui can properly connect and pass its own callback function

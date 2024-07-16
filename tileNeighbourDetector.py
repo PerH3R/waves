@@ -27,7 +27,7 @@ class TileRulesDetector:
         self.sections_folder = None
         self.output_file = None
 
-    def update_config(self, tile_folder, world_name, sections_folder, output_file):
+    def update_config(self, tile_folder: str, world_name: str, sections_folder: str, output_file: str) -> None:
         self.tile_folder = tile_folder
         self.world_name = world_name
         self.sections_folder = sections_folder
@@ -39,7 +39,7 @@ class TileRulesDetector:
         # Detect grid color. Legacy: use the pixel at (0,0) to determine the grid color.
         gridcolor = world[0,0]
 
-        # # Detect grid color. Modern: use the most-occurring color to determine the grid color.
+        # # Detect grid color. Advanced: use the most-occurring color to determine the grid color.
         # TODO: This doesn't work properly yet.
         # flattened_world = world.reshape(-1, 3)
 
@@ -95,7 +95,7 @@ class TileRulesDetector:
         return world_sections
 
 
-    def validate_supplied_tile(self, tile_nr, tile_folder, tile_size):
+    def validate_supplied_tile(self, tile_nr: int, tile_folder: str, tile_size: int) -> bool:
         full_path = os.path.join("./", tile_folder, str(tile_nr) + ".png")
         if not os.path.exists(full_path):
             print("Path of the file is invalid")
@@ -110,7 +110,7 @@ class TileRulesDetector:
             print("not a valid img")
             return False
         
-    def add_new_tile(self, raw_img_data, tile_folder):
+    def add_new_tile(self, raw_img_data: str, tile_folder: str) -> int:
         imgname = ""
         # The current highest tile ID, + 1 for the new tile
         new_tile_nr = sorted([int(n.split('.')[0]) for n in os.listdir(tile_folder)])[-1] + 1
@@ -118,8 +118,8 @@ class TileRulesDetector:
         cv.imwrite("{f}/{i}.png".format(f=tile_folder, i=imgname), raw_img_data)
         return new_tile_nr
 
-    #gets a (subsection of) the world and returns the representation of the tiles as ids as an 2d-array
-    def build_section_ids(self, world_section, tileset, tile_size, specified_tiles, tile_folder):
+    #gets (a subsection of) the world and returns the representation of the tiles as ids as an 2d-array
+    def build_section_ids(self, world_section: np.array, tileset: dict, tile_size: int, specified_tiles: list, tile_folder: str) -> np.array:
         # Create an array for the tile ids we find. Initialize on -1 for tiles we did not find.
         section_numbered = np.full((int(world_section.shape[0]/tile_size), int(world_section.shape[1]/tile_size)), -1)
 
@@ -138,10 +138,13 @@ class TileRulesDetector:
 
         unknown_imgs = [] 
         skip_section = False
+
+        # TODO: remove these prints?
         print(world_section.shape)
         print(section_numbered.shape)
         print(section_numbered)
         print(np.count_nonzero(section_numbered==-1))
+
         for y in range(section_numbered.shape[0]):
             for x in range(section_numbered.shape[0]):
                 if section_numbered[y][x] == -1:
@@ -231,7 +234,7 @@ class TileRulesDetector:
         # print(unknown_imgs)
         return section_numbered
 
-    def add_sect_to_dict(self, section_numbered, neighbourdict):
+    def add_sect_to_dict(self, section_numbered: np.array, neighbourdict: dict) -> None:
 
         for row in range(section_numbered.shape[0]):
             for col in range(section_numbered.shape[1]):
@@ -255,7 +258,7 @@ class TileRulesDetector:
                     neighbourdict[selfTile]["left"].add(str(section_numbered[row][col-1]))
 
 
-    def run(self, update_callback):
+    def run(self, update_callback: callable) -> None:
         self.is_running = True
         
         typer.echo(f"Separate tiles tileset folder: {self.tile_folder}")
@@ -309,7 +312,7 @@ def main(
         world_name: Annotated[str, typer.Argument(help="The image file containing the original world from which neighbor rules should be inferred.")],
         sections_folder: Annotated[str, typer.Argument(help="The folder in which all separate world sections extracted from the world image file should be saved.")],
         output_file: Annotated[str, typer.Argument(help="The output JSON file containing the rules of what tiles can have which neighbors.")]
-):
+) -> None:
     tileRulesDetector = TileRulesDetector()
     tileRulesDetector.update_config(tile_folder, world_name, sections_folder, output_file)
     def update_callback(progress):

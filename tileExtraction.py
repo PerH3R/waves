@@ -23,7 +23,7 @@ class TileExtractor:
         self.grid_offset_y = None
         self.grid_size = None
 
-    def update_config(self, filename_path, output_path, tile_size, grid_offset_x, grid_offset_y, grid_size):
+    def update_config(self, filename_path: str, output_path: str, tile_size: int, grid_offset_x: int, grid_offset_y: int, grid_size: int) -> None:
         self.filename_path = filename_path
         self.output_path = output_path
         self.tile_size = tile_size
@@ -32,7 +32,7 @@ class TileExtractor:
         self.grid_size = grid_size
 
     # adds a tile to a list. If an accompanying hashset is passed it doesn't add duplicates
-    def add_tile(self, tile, tilelist, hashset=None):
+    def add_tile(self, tile: np.array, tilelist: list, hashset=None) -> None:
         if hashset is None:
             tilelist.append(tile)
         else:
@@ -41,7 +41,7 @@ class TileExtractor:
                 tilelist.append(tile)
         
         
-    def write_tiles(self, file_dir, tilelist):
+    def write_tiles(self, file_dir: str, tilelist: list) -> None:
         makedirs(file_dir, exist_ok=True)
         imgname = 0
         for tile in tilelist:
@@ -62,7 +62,7 @@ class TileExtractor:
     # this is safe to assume.
     # The grid also needs to go around the border of the whole image.
     # We use the top left pixel to detect the color of the mask.
-    def separate_grid(self, tileset, output_path, update_callback):
+    def separate_grid(self, tileset: np.array, output_path: str, update_callback: callable) -> None:
         # Detect grid color. Legacy: use the pixel at (0,0) to determine the grid color.
         gridcolor = tileset[0,0]
 
@@ -149,7 +149,7 @@ class TileExtractor:
     # tile_size denotes the standard size of the tiles (16 means 16x16).
     # Offset is for the cases where there is a border around the entire tileset,
     # but no grid.
-    def fixed_offset_extraction(self, tileset, output_path, tile_size, grid_offset_x, grid_offset_y, grid_size):
+    def fixed_offset_extraction(self, tileset: np.array, output_path: str, tile_size: int, grid_offset_x: int, grid_offset_y: int, grid_size: int) -> None:
         x = 0
         y = 0
         tilesetX_size = tileset.shape[:2][1]
@@ -166,7 +166,7 @@ class TileExtractor:
         
 
 
-    def run(self, update_callback):
+    def run(self, update_callback: callable) -> None:
         self.is_running = True
 
         #load tileset
@@ -194,7 +194,7 @@ def main(
         grid_offset_x: Annotated[Optional[int], typer.Option(help="The offset at which the leftmost column of tiles starts, in pixels.")] = None,
         grid_offset_y: Annotated[Optional[int], typer.Option(help="The offset at which the topmost row of tiles starts, in pixels.")] = None,
         grid_size: Annotated[Optional[int], typer.Option(help="The size of the grid; the width of the lines separating tiles, in pixels.")] = None
-):
+) -> None:
     tileExtractor = TileExtractor()
     tileExtractor.update_config(filename_path, output_path, tile_size, grid_offset_x, grid_offset_y, grid_size)
     def update_callback(progress):

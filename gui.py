@@ -52,7 +52,6 @@ class Tabs(QWidget):
         self.tab1 = QWidget()
         self.tab2 = QWidget()
         self.tab3 = QWidget()
-        # self.tabs.resize(400,300)
         
         # Add tabs
         self.tabs.addTab(self.tab1,"Tileset extraction")
@@ -67,14 +66,14 @@ class Tabs(QWidget):
         self.tab1_layout.addRow(self.tr("Input tileset filename:"), self.inputfilename)    
 
         self.pushButton1 = QPushButton("Select tileset")
-        self.pushButton1.clicked.connect(lambda: self.Browser(file_filter="Image file (*.png *.bmp *.tiff *.jpg *.jpeg)", button_caption="Open Tileset", input_field=self.inputfilename))
+        self.pushButton1.clicked.connect(lambda: self.FileBrowser(file_filter="Image file (*.png *.bmp *.tiff *.jpg *.jpeg)", button_caption="Open Tileset", input_field=self.inputfilename))
         self.tab1_layout.addWidget(self.pushButton1)
 
         self.tileoutputfolder = QLineEdit()
         self.tab1_layout.addRow(self.tr("Output tileset folder:"), self.tileoutputfolder)    
 
         self.pushButton1o = QPushButton("Select output folder")
-        self.pushButton1o.clicked.connect(lambda: self.Browser(file_filter="dir", button_caption="Extract to folder", input_field=self.tileoutputfolder))
+        self.pushButton1o.clicked.connect(lambda: self.FileOutputBrowser(file_filter="dir", button_caption="Extract to folder", input_field=self.tileoutputfolder))
         self.tab1_layout.addWidget(self.pushButton1o)
 
         # Toggle for autodetecting the grid of the tileset
@@ -124,7 +123,7 @@ class Tabs(QWidget):
         self.tab2_layout.addRow(self.tr("Input tileset folder:"), self.tilesetfolder)    
 
         self.pushButton2 = QPushButton("Select tileset folder")
-        self.pushButton2.clicked.connect(lambda: self.Browser(file_filter="dir", button_caption="Open Tileset Folder", input_field=self.tilesetfolder))
+        self.pushButton2.clicked.connect(lambda: self.DirBrowser(button_caption="Open Tileset Folder", input_field=self.tilesetfolder))
         self.tab2_layout.addWidget(self.pushButton2)
 
         # Selecting world image
@@ -132,7 +131,7 @@ class Tabs(QWidget):
         self.tab2_layout.addRow(self.tr("Overworld image filename:"), self.inputworld)    
 
         self.pushButton3 = QPushButton("Select world")
-        self.pushButton3.clicked.connect(lambda: self.Browser(file_filter="Image file (*.png *.bmp *.tiff *.jpg *.jpeg)", button_caption="Open World", input_field=self.inputworld))
+        self.pushButton3.clicked.connect(lambda: self.FileBrowser(file_filter="Image file (*.png *.bmp *.tiff *.jpg *.jpeg)", button_caption="Open World", input_field=self.inputworld))
         self.tab2_layout.addWidget(self.pushButton3)
 
         # Selecting world image
@@ -140,7 +139,7 @@ class Tabs(QWidget):
         self.tab2_layout.addRow(self.tr("Output folder for world sections:"), self.outputsections)    
 
         self.pushButtonSections = QPushButton("Select output folder for world sections")
-        self.pushButtonSections.clicked.connect(lambda: self.Browser(file_filter="dir", button_caption="Open sections folder", input_field=self.outputsections))
+        self.pushButtonSections.clicked.connect(lambda: self.DirBrowser(button_caption="Open sections folder", input_field=self.outputsections))
         self.tab2_layout.addWidget(self.pushButtonSections)
 
         # Selecting output .json
@@ -148,7 +147,7 @@ class Tabs(QWidget):
         self.tab2_layout.addRow(self.tr("Output neighbor filename:"), self.outputneighborrules)    
 
         self.pushButton4 = QPushButton("Select output neighbor file")
-        self.pushButton4.clicked.connect(lambda: self.Browser(file_filter="JSON file(*.json)", button_caption="Write to ruleset", input_field=self.outputneighborrules))
+        self.pushButton4.clicked.connect(lambda: self.FileOutputBrowser(file_filter="JSON file(*.json)", button_caption="Write to ruleset", input_field=self.outputneighborrules))
         self.tab2_layout.addWidget(self.pushButton4)
 
         # Progress bar
@@ -182,7 +181,7 @@ class Tabs(QWidget):
         self.tab3_layout.addRow(self.tr("Input tileset folder:"), self.tilesetfolder2)    
 
         self.pushButton5 = QPushButton("Select tileset folder")
-        self.pushButton5.clicked.connect(lambda: self.Browser(file_filter="dir", button_caption="Open Tileset Folder", input_field=self.tilesetfolder2))
+        self.pushButton5.clicked.connect(lambda: self.DirBrowser(button_caption="Open Tileset Folder", input_field=self.tilesetfolder2))
         self.tab3_layout.addWidget(self.pushButton5)
 
         # Neighbor rules
@@ -190,15 +189,15 @@ class Tabs(QWidget):
         self.tab3_layout.addRow(self.tr("Input neighbor filename:"), self.inputneighborrules)    
 
         self.pushButton6 = QPushButton("Select input neighbor file")
-        self.pushButton6.clicked.connect(lambda: self.Browser(file_filter="JSON file(*.json)", button_caption="Open neighbor ruleset", input_field=self.inputneighborrules))
+        self.pushButton6.clicked.connect(lambda: self.FileBrowser(file_filter="JSON file(*.json)", button_caption="Open neighbor ruleset", input_field=self.inputneighborrules))
         self.tab3_layout.addWidget(self.pushButton6)
 
         # Output world file
-        self.inputworld2 = QLineEdit()
-        self.tab3_layout.addRow(self.tr("Output world file:"), self.inputworld2)    
+        self.outputworld = QLineEdit()
+        self.tab3_layout.addRow(self.tr("Output world file:"), self.outputworld)    
 
         self.pushButton7 = QPushButton("Select world output file")
-        self.pushButton7.clicked.connect(lambda: self.Browser(file_filter="Image file (*.png *.bmp *.tiff *.jpg *.jpeg)", button_caption="Write World", input_field=self.inputworld2))
+        self.pushButton7.clicked.connect(lambda: self.FileOutputBrowser(file_filter="Image file (*.png *.bmp *.tiff *.jpg *.jpeg)", button_caption="Write World", input_field=self.outputworld))
         self.tab3_layout.addWidget(self.pushButton7)
 
         self.visualGenerationToggle = QCheckBox("Show live world generation. Note: this may result in slower generation,\nespecially when the generator gets 'stuck' in a local problem.")
@@ -224,16 +223,20 @@ class Tabs(QWidget):
         # self.setLayout(self.layout)
 
 
-    def Browser(self, file_filter, button_caption, input_field):
-        if file_filter == "dir":
-            folderName = QFileDialog.getExistingDirectory(parent=self, caption=button_caption, directory=getcwd())
-            input_field.setText(folderName)
-        else:    
-            fileName, _ = QFileDialog.getOpenFileName(parent=self, caption=button_caption, directory=getcwd(), filter=file_filter)
-            input_field.setText(fileName)
+    def DirBrowser(self, button_caption: str, input_field: QLineEdit) -> None:
+        folderName = QFileDialog.getExistingDirectory(parent=self, caption=button_caption, directory=getcwd())
+        input_field.setText(folderName)
+
+    def FileBrowser(self, file_filter: str, button_caption: str, input_field: QLineEdit) -> None:
+        fileName, _ = QFileDialog.getOpenFileName(parent=self, caption=button_caption, directory=getcwd(), filter=file_filter)
+        input_field.setText(fileName)
+
+    def FileOutputBrowser(self, file_filter: str, button_caption: str, input_field: QLineEdit) -> None:
+        outputFileName, _ = QFileDialog.getSaveFileName(parent=self, caption=button_caption, directory=getcwd(), filter=file_filter)
+        input_field.setText(outputFileName)
 
         
-    def autoDetectToggle(self):
+    def autoDetectToggle(self) -> None:
         value = self.toggleAutoDetect.isChecked()
         self.tileSize.setEnabled(not value)
         self.gridOffsetX.setEnabled(not value)
@@ -241,7 +244,7 @@ class Tabs(QWidget):
         self.gridSize.setEnabled(not value)
 
     # Start functions
-    def start_tile_extractor(self):
+    def start_tile_extractor(self) -> None:
         # Set tilesizepx to correct value, and to None if no value is filled in.
         tileSize = int(self.tileSize.text()) if len(self.tileSize.text()) > 0 else None
         gridOffsetXpx = int(self.gridOffsetX.text()) if len(self.gridOffsetX.text()) > 0 else None
@@ -254,7 +257,7 @@ class Tabs(QWidget):
 
         self.worker1.start()
 
-    def start_tile_rules_detector(self):
+    def start_tile_rules_detector(self) -> None:
         tile_folder = self.tilesetfolder.text()
         world_name = self.inputworld.text()
         sections_folder = self.outputsections.text()
@@ -264,27 +267,26 @@ class Tabs(QWidget):
 
         self.worker2.start()
 
-    def start_wave_collapser(self):
+    def start_wave_collapser(self) -> None:
         tile_folder = self.tilesetfolder2.text()
         neighbour_rules_file = self.inputneighborrules.text()
         xSize = int(self.worldSizeX.text())
         ySize = int(self.worldSizeY.text())
         show_generation = self.visualGenerationToggle.isChecked()
+        output_world_filename = self.outputworld.text()
         
-        self.worker3.task.update_config(tile_folder, neighbour_rules_file, xSize, ySize, show_generation)
-
-        print("Le ciel est bleu")
+        self.worker3.task.update_config(tile_folder, neighbour_rules_file, xSize, ySize, output_world_filename, show_generation)
 
         self.worker3.start()
     
     # Progress bar update functions
-    def update_progress_bar1(self, value):
+    def update_progress_bar1(self, value: int) -> None:
         self.progress_bar1.setValue(value)
 
-    def update_progress_bar2(self, value):
+    def update_progress_bar2(self, value: int) -> None:
         self.progress_bar2.setValue(value)
 
-    def update_progress_bar3(self, value):
+    def update_progress_bar3(self, value: int) -> None:
         self.progress_bar3.setValue(value)
 
 
