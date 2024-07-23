@@ -10,6 +10,7 @@ Tested using [Overworld Tileset](https://www.spriters-resource.com/game_boy_gbc/
 ## Installation
 The required packages can be installed using poetry. To install the required packages, use:
 > poetry install
+
 in the directory containing the `pyproject.toml` file.
 
 ## Usage (GUI)
