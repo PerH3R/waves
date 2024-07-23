@@ -37,6 +37,7 @@ Here are a few examples of worlds generated using this project and the Link's Aw
 ![Phone houses](cool_generated_worlds/world_phones.png)
 ![Dark forest](cool_generated_worlds/trees.png)
 ![Overworld](cool_generated_worlds/world.png)
+![Caves](cool_generated_worlds/caves.png)
 
 The following worlds have a larger size and took a longer time to complete. Some of these worlds also use tiles not present in the tileset and were manually added with our project.
 

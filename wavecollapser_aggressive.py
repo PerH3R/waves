@@ -1,3 +1,6 @@
+"""This is an experimental versions of the wave collapse algorithm which will collapse all constraints to all neighbouring tiles. This is very slow in the beginning,
+but should help prevent blocking situations (although not perfect). Needs further development."""
+
 import os
 import cv2 as cv
 import json
