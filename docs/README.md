@@ -46,7 +46,7 @@ This program is still very much in beta and is a pet project. Development may ha
 - Potentially looking for neighbor tile rules between world sections. Currently, the rule detector does not check between world sections what tiles could be adjacent to each other. Some games have a complete change of area style / biome between world sections, so this is harder than it sounds.
 
 ### Wave collapse
-- Guaranteed fast and non-blocking generation. The current DFS implementation is the best we could come up with and works properly on small generated worlds or simple tilesets. However, for large, complex tilesets or worlds, this will result in very slow generation with a lot of repeated, similar mistakes.
+- Guaranteed fast and non-blocking generation. The current DFS implementation is the best we could come up with and works properly on small generated worlds or simple tilesets. However, for large, complex tilesets or worlds, this will result in extremely slow generation with a lot of repeated, similar mistakes.
 - Seeding generation, allowing the user to put some tiles in the world so, for example, a (walkable) path between two locations is guaranteed. This gives more control to the user and will result in less random worlds.
 - Potentially a nicer UI showing the entropy of non-determined tiles changing over time.
 - Non-infuriating progress-bar.
