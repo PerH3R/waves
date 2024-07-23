@@ -56,6 +56,7 @@ This program is still very much in beta and is a pet project. Development may ha
 
 ## Some examples of generated worlds
 Here are a few examples of worlds generated using this project. These worlds are 8x10, the original size used in Link's Awakening on the GameBoy.
+
 ![Cave world](cool_generated_worlds/first_complete_world.png)
 ![Overworld](cool_generated_worlds/first_DFS_world.png)
 ![Castle](cool_generated_worlds/castle_world.png)
@@ -66,6 +67,7 @@ Here are a few examples of worlds generated using this project. These worlds are
 ![Overworld](cool_generated_worlds/world.png)
 
 The following worlds have a larger size and took a longer time to complete. Some of these worlds also use tiles not present in the tileset and were manually added with our project.
+
 ![Raft ride](cool_generated_worlds/raft_ride.png)
 ![Mountain range](cool_generated_worlds/mountain_range.png)
 ![Lots of phone houses](cool_generated_worlds/large_world_phone_houses.png)
