@@ -8,10 +8,7 @@ This Readme provides a brief introduction and some instructions on how to use th
 Tested using [Overworld Tileset](https://www.spriters-resource.com/game_boy_gbc/thelegendofzeldalinksawakeningdx/sheet/9445/) and [Koholint Island (GBC)](https://www.spriters-resource.com/game_boy_gbc/thelegendofzeldalinksawakeningdx/sheet/9444/) from [Spriters Resource: Link's Awakening DX](https://www.spriters-resource.com/game_boy_gbc/thelegendofzeldalinksawakeningdx/)
 
 ## Installation
-The required packages can be installed using poetry. To install the required packages, use:
-> poetry install
-
-in the directory containing the `pyproject.toml` file.
+The required packages can be installed using poetry. To install the required packages, use `poetry install` in the directory containing the `pyproject.toml` file.
 
 ## Usage (GUI)
 1. If your tileset happens to have a similar layout to the tileset we used (grid color same as top left pixel in tileset image), the only user input needed is an input image and an output folder. If not it may be needed to manually set tile size, grid offsets and grid width. Extracted tiles can be in the specified folder.
