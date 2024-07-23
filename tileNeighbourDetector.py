@@ -324,21 +324,3 @@ def main(
 if __name__=="__main__":
     # typer.run(main)
     app()
-
-"""
-BUGS:
-encountering tile newly added during neighbour detecting
-
-
-TODO:
-1. Add neighbor weights support?
-
-
-Super-ultimate nice-to-haves (niet verplicht):
-1. Scaling van world sections zodat je ze altijd goed kan zien. Als nodig: toch maar in een PyQt popup?
-2. Omcirkelen van de gevonden tile die we niet hebben weten te plaatsen in de tileset.
-3. Progress bar tijdens alle processen.
-4. Mooiere UI.
-5. Niet-vastlopend algoritme in bepaalde gevallen.
-
-"""

@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "waves"
+version = "0.1.0"
+description = ""
+authors = [
+    "Per Hermanus",
+    "Sem Kluiver",
+]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+climage = "^0.2.0"
+opencv-python = "^4.10.0.84"
+tqdm = "^4.66.4"
+pillow = "^10.4.0"
+typer = "^0.12.3"
+numpy = "^2.0.1"
+kdtree = "^0.16"
+PyQt6 = "^6.7.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

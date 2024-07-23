@@ -492,19 +492,3 @@ def main(
 if __name__=="__main__":
     # typer.run(main)
     app()
-
-"""
-TODO:
-Soms duurt genereren heel erg lang, misschien door moeilijke tegels.
-Misschien een soort stop-moment inbouwen?
-
-Water fixen: tegels die niet in de wereld voorkomen wel alloceren zodat die gevonden kunnen
-worden, waaronder water.
-
-Gewichten zodat we niet 3 telefoonhuisjes krijgen
-
-Animatie van genereren, met live entropie updates. Partially. done
-
-Misschien ook nog als extensie: kijken tussen world-sections, maar niet altijd.
-Alleen als het in dezelfde type "biome" is?
-"""

@@ -1,11 +1,12 @@
 # File extensions
-*.png
-*.PNG
-
 *.pyc
 
 # Folders
 tilesets
-*_tiles
+*_tiles/*
 masks
+worldmasks
+world_sections*
 __pycache__
+sonic/*
+castlevania/*

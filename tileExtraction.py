@@ -63,10 +63,10 @@ class TileExtractor:
     # The grid also needs to go around the border of the whole image.
     # We use the top left pixel to detect the color of the mask.
     def separate_grid(self, tileset: np.array, output_path: str, update_callback: callable) -> None:
-        # Detect grid color. Legacy: use the pixel at (0,0) to determine the grid color.
+        # Detect grid color. Legacy, but working: use the pixel at (0,0) to determine the grid color.
         gridcolor = tileset[0,0]
 
-        # # Detect grid color. Modern: use the most-occurring color to determine the grid color.
+        # # Detect grid color. Experimental, not working well yet: use the most-occurring color to determine the grid color.
         # flattened_tileset = tileset.reshape(-1, 3)
 
         # unique_color, counts = np.unique(flattened_tileset, axis=0, return_counts=True)
