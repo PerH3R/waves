@@ -70,6 +70,6 @@ The following worlds have a larger size and took a longer time to complete. Some
 
 ![Raft ride](cool_generated_worlds/raft_ride.png)
 ![Mountain range](cool_generated_worlds/mountain_range.png)
-![Lots of phone houses](cool_generated_worlds/large_world_phone_houses.png)
+![Lots of phone houses](cool_generated_worlds/large_world_phones.png)
 ![Impossible horizon](cool_generated_worlds/impossible_horizon.png)
 ![World with hidden statue](cool_generated_worlds/world_statue.png)
