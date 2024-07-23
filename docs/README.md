@@ -1,5 +1,5 @@
 # Readme and manual
-## For automatic tileset extractor and DFS wave collapse
+## For automatic tileset extraction and DFS wave collapse
 This Readme provides a brief introduction and some instructions on how to use the automatic tileset extractor and DFS wave collapse. This program allows the user to create new worlds using a wave collapse function. Contrary to other solutions, this program also allows the user to extract their own tiles from existing worlds and tilesets (from, for example, retro games) to use during generation. This program has a workflow consisting of three parts:
 1. Extracting tiles as separate images from a single tileset image.
 2. Detecting the rules of the tileset from an original world: what tiles can be adjacent to what tiles. An original, sensible world is required for this step, for example, the overworld of the retro game.
