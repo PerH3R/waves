@@ -26,8 +26,25 @@ When this process is completed the neigbour file can be used in step 3 to contin
 3. Set how many tiles wide and high you want the world to be (we recommend a maximum of about 10x10 for complex worlds). Select the tile folder generated in step 1 and the neighbour rules generated in step 2. Tell the program how your world file should be called (similar issue as the json in step 2) and finally decide if you want to see live world generation (might not work properly on all linux installations). Press 'Generate World' to generate a new world. If you want to rapidly generate many worlds (either because the generation gets stuck or just because you want a lot of them) it might be tedious to refill all the fields, you may want to run the script directly from terminal instead. Don't forget to change the output world file name or your previous world will be overwritten. 
 
 
-## Examples
-Here are some examples generated using this project using the Link's Awakening DX tileset.
+## Some examples of generated worlds
+Here are a few examples of worlds generated using this project and the Link's Awakening DX tileset. These first worlds are 8x10, the original size used in Link's Awakening on the GameBoy.
+
+![Cave world](cool_generated_worlds/first_complete_world.png)
+![Overworld](cool_generated_worlds/first_DFS_world.png)
+![Castle](cool_generated_worlds/castle_world.png)
+![World with various trees](cool_generated_worlds/first_world_with_better_backtracking.png)
+![Armor desert](cool_generated_worlds/world_armor.png)
+![Phone houses](cool_generated_worlds/world_phones.png)
+![Dark forest](cool_generated_worlds/trees.png)
+![Overworld](cool_generated_worlds/world.png)
+
+The following worlds have a larger size and took a longer time to complete. Some of these worlds also use tiles not present in the tileset and were manually added with our project.
+
+![Raft ride](cool_generated_worlds/raft_ride.png)
+![Mountain range](cool_generated_worlds/mountain_range.png)
+![Lots of phone houses](cool_generated_worlds/large_world_phones.png)
+![Impossible horizon](cool_generated_worlds/impossible_horizon.png)
+![World with hidden statue](cool_generated_worlds/world_statue.png)
 
 ## Known issues and TODOs
 This program is still very much in beta and is a pet project. Development may halt at any time. Even still, this comprehensive list describes some or most features that may be nice to implement. Feel free to create a pull request if you feel like implementing something.
@@ -51,23 +68,3 @@ This program is still very much in beta and is a pet project. Development may ha
 
 ### UI
 - Generally better, nicer UI with buttons replaced. Sorry, we're no UI wizards. This was our first project ever involving UI.
-
-## Some examples of generated worlds
-Here are a few examples of worlds generated using this project. These worlds are 8x10, the original size used in Link's Awakening on the GameBoy.
-
-![Cave world](cool_generated_worlds/first_complete_world.png)
-![Overworld](cool_generated_worlds/first_DFS_world.png)
-![Castle](cool_generated_worlds/castle_world.png)
-![World with various trees](cool_generated_worlds/first_world_with_better_backtracking.png)
-![Armor desert](cool_generated_worlds/world_armor.png)
-![Phone houses](cool_generated_worlds/world_phones.png)
-![Dark forest](cool_generated_worlds/trees.png)
-![Overworld](cool_generated_worlds/world.png)
-
-The following worlds have a larger size and took a longer time to complete. Some of these worlds also use tiles not present in the tileset and were manually added with our project.
-
-![Raft ride](cool_generated_worlds/raft_ride.png)
-![Mountain range](cool_generated_worlds/mountain_range.png)
-![Lots of phone houses](cool_generated_worlds/large_world_phones.png)
-![Impossible horizon](cool_generated_worlds/impossible_horizon.png)
-![World with hidden statue](cool_generated_worlds/world_statue.png)
