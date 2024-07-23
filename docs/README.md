@@ -47,7 +47,7 @@ This program is still very much in beta and is a pet project. Development may ha
 
 ### Wave collapse
 - Guaranteed fast and non-blocking generation. The current DFS implementation is the best we could come up with and works properly on small generated worlds or simple tilesets. However, for large, complex tilesets or worlds, this will result in very slow generation with a lot of repeated, similar mistakes.
-- Seeding generation, allowing the user to put some tiles in the world so, for example, a path between two locations is guaranteed. This gives more control to the user and will result in less random worlds.
+- Seeding generation, allowing the user to put some tiles in the world so, for example, a (walkable) path between two locations is guaranteed. This gives more control to the user and will result in less random worlds.
 - Potentially a nicer UI showing the entropy of non-determined tiles changing over time.
 - Non-infuriating progress-bar.
 
