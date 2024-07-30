@@ -225,41 +225,41 @@ class World:
                     processes = []
                     if y-1 >= 0 : # if above is in bounds
                         # up
-                        processes.append(Process(target=self.collapse_tile, args=(self.world[x][y-1], 
-                                                                             self.get_nb_possibilities(self.world[x][y].get_tile_id(), "up"))
-                                                ))
+                        # processes.append(Process(target=self.collapse_tile, args=(self.world[x][y-1], 
+                        #                                                      self.get_nb_possibilities(self.world[x][y].get_tile_id(), "up"))
+                        #                         ))
                         # self.world[x][y-1].set_possibilities(self.world[x][y-1].get_possibilities() & 
                         #     self.get_nb_possibilities(self.world[x][y].get_tile_id(), "up"))
                         self.collapse_tile(self.world[x][y-1], self.get_nb_possibilities(self.world[x][y].get_tile_id(), "up"))
                     if x+1 < self.xSize:
                         # right
-                        processes.append(Process(target=self.collapse_tile, args=(self.world[x+1][y], 
-                                                                             self.get_nb_possibilities(self.world[x][y].get_tile_id(), "right"))
-                                                ))
+                        # processes.append(Process(target=self.collapse_tile, args=(self.world[x+1][y], 
+                        #                                                      self.get_nb_possibilities(self.world[x][y].get_tile_id(), "right"))
+                        #                         ))
                         # self.world[x+1][y].set_possibilities(self.world[x+1][y].get_possibilities() & 
                         #     self.get_nb_possibilities(self.world[x][y].get_tile_id(), "right"))
-                        # self.collapse_tile(self.world[x+1][y], self.get_nb_possibilities(self.world[x][y].get_tile_id(), "right"))
+                        self.collapse_tile(self.world[x+1][y], self.get_nb_possibilities(self.world[x][y].get_tile_id(), "right"))
                     if y+1 < self.ySize:
                         # down
-                        processes.append(Process(target=self.collapse_tile, args=(self.world[x][y+1], 
-                                                                             self.get_nb_possibilities(self.world[x][y].get_tile_id(), "down"))
-                                                ))
+                        # processes.append(Process(target=self.collapse_tile, args=(self.world[x][y+1], 
+                        #                                                      self.get_nb_possibilities(self.world[x][y].get_tile_id(), "down"))
+                        #                         ))
                         # self.world[x][y+1].set_possibilities(self.world[x][y+1].get_possibilities() & 
                         #     self.get_nb_possibilities(self.world[x][y].get_tile_id(), "down"))
-                        # self.collapse_tile(self.world[x][y+1], self.get_nb_possibilities(self.world[x][y].get_tile_id(), "down"))
+                        self.collapse_tile(self.world[x][y+1], self.get_nb_possibilities(self.world[x][y].get_tile_id(), "down"))
 
                     if x-1 >= 0:
                         # left
-                        processes.append(Process(target=self.collapse_tile, args=(self.world[x-1][y], 
-                                                                             self.get_nb_possibilities(self.world[x][y].get_tile_id(), "left"))
-                                                ))
+                        # processes.append(Process(target=self.collapse_tile, args=(self.world[x-1][y], 
+                        #                                                      self.get_nb_possibilities(self.world[x][y].get_tile_id(), "left"))
+                        #                         ))
                         # self.world[x-1][y].set_possibilities(self.world[x-1][y].get_possibilities() & 
                         #     self.get_nb_possibilities(self.world[x][y].get_tile_id(), "left"))
-                        # self.collapse_tile(self.world[x-1][y], self.get_nb_possibilities(self.world[x][y].get_tile_id(), "left"))
-                    for process in processes:
-                        process.start()
-                    for process in processes:
-                        process.join()
+                        self.collapse_tile(self.world[x-1][y], self.get_nb_possibilities(self.world[x][y].get_tile_id(), "left"))
+                    # for process in processes:
+                    #     process.start()
+                    # for process in processes:
+                    #     process.join()
 
                         
                         
