@@ -3,9 +3,7 @@ from os import listdir
 
 # Load world png
 def load_world_tileset(filename: str):
-    print(filename)
     tileset = cv.imread(filename)
-    print(type(tileset))
     return tileset
 
 # Load tile images

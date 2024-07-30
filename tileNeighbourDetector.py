@@ -12,9 +12,7 @@ app = typer.Typer(pretty_exceptions_enable=False)
 
 from utils import load_world_tileset, load_tile_imgs
 
-np.zeroes = np.zeros # We like being British
-
-# todo -> contouring worldmap af, area bij area kopies maken met nummers gematched aan tiles om vervolgens burenlijsten van te kunnen maken
+np.zeroes = np.zeros # Important
 
 
 class TileRulesDetector:
@@ -36,35 +34,14 @@ class TileRulesDetector:
     # uses contours to extract the different areas of an overworld file
     # returns seperate sections of the world
     def split_sections(self, world, size):
-        # Detect grid color. Legacy: use the pixel at (0,0) to determine the grid color.
+        # Detect grid color using top-left pixel
         gridcolor = world[0,0]
 
-        # # Detect grid color. Advanced: use the most-occurring color to determine the grid color.
-        # TODO: This doesn't work properly yet.
-        # flattened_world = world.reshape(-1, 3)
-
-        # unique_color, counts = np.unique(flattened_world, axis=0, return_counts=True)
-        # max_count_index = np.argmax(counts)
-
-        # gridcolor = unique_color[max_count_index]
-
-        # new_list = []
-        # for x, y in zip(counts, unique_color):
-        #     new_list.append((x, y))
-
-        # new_list = sorted(new_list, key=lambda element: element[0])
-
-        # print(new_list)
-
-        # Create the mask.
+        # Create the mask
         mask = np.all(world == gridcolor, axis=-1)
         mask = ~mask
         color_mask = mask.astype(np.uint8)
         color_mask *= 255
-
-        # # Save mask to file to inspect
-        # os.makedirs("./worldmasks", exist_ok=True)
-        # cv.imwrite("./worldmasks/{f}_worldmask.png".format(f="lalal"), color_mask)
         
         # Detect contours
         contours, hierarchy = cv.findContours(image=color_mask, mode=cv.RETR_TREE, method=cv.CHAIN_APPROX_SIMPLE)
@@ -89,12 +66,14 @@ class TileRulesDetector:
 
             box_image = world[minY : maxY+1, minX: maxX+1]
 
+            # Check if world section is divisible by tile size and if
+            # world section contains at least 16 tiles (4 by 4).
             if (box_image.shape[0] % size == 0 and box_image.shape[0] >= size*4) and (box_image.shape[1] % size == 0 and box_image.shape[1] >= size*4):
                 world_sections.append(box_image)
         
         return world_sections
 
-
+    # Check if given tile exists and if it has the correct size
     def validate_supplied_tile(self, tile_nr: int, tile_folder: str, tile_size: int) -> bool:
         full_path = os.path.join("./", tile_folder, str(tile_nr) + ".png")
         if not os.path.exists(full_path):
@@ -109,7 +88,8 @@ class TileRulesDetector:
         except:
             print("not a valid img")
             return False
-        
+
+    # Add new tile specified during manual rule addition   
     def add_new_tile(self, raw_img_data: str, tile_folder: str) -> int:
         imgname = ""
         # The current highest tile ID, + 1 for the new tile
@@ -118,7 +98,7 @@ class TileRulesDetector:
         cv.imwrite("{f}/{i}.png".format(f=tile_folder, i=imgname), raw_img_data)
         return new_tile_nr
 
-    #gets (a subsection of) the world and returns the representation of the tiles as ids as an 2d-array
+    # Gets (a subsection of) the world and returns the representation of the tiles as ids as an 2d-array
     def build_section_ids(self, world_section: np.array, tileset: dict, tile_size: int, specified_tiles: list, tile_folder: str) -> np.array:
         # Create an array for the tile ids we find. Initialize on -1 for tiles we did not find.
         section_numbered = np.full((int(world_section.shape[0]/tile_size), int(world_section.shape[1]/tile_size)), -1)
@@ -126,10 +106,8 @@ class TileRulesDetector:
         # For each tile, we match it in the world (section).
         for id, tile in tileset.items():
             # Create a copy to draw the match on
-            # world_section_copy = deepcopy(world_section)
             res = cv.matchTemplate(world_section, tile, cv.TM_SQDIFF_NORMED)
             threshold = 0.01
-            w, h = tile.shape[:2]
             loc = np.where(res <= threshold)
             for m in zip(*loc[::-1]):
                 # only take into account matches coinciding with stride length
@@ -139,35 +117,21 @@ class TileRulesDetector:
         unknown_imgs = [] 
         skip_section = False
 
-        # TODO: remove these prints?
-        print(world_section.shape)
-        print(section_numbered.shape)
-        print(section_numbered)
-        print(np.count_nonzero(section_numbered==-1))
-
         for y in range(section_numbered.shape[0]):
-            for x in range(section_numbered.shape[0]):
+            for x in range(section_numbered.shape[1]):
                 if section_numbered[y][x] == -1:
                     current_subsection = world_section[(y*tile_size):(y+1)*tile_size, (x*tile_size):(x+1)*tile_size]
                     specified_tiles_idx = -1
                     specified_earlier = False
-                    # print("cs", current_subsection)
+
                     # check if file has been manually specified before
-                    # print("st", len(specified_tiles[0]), len(specified_tiles[1]))
                     for image_idx in range(len(specified_tiles[0])):
-                        # print(specified_tiles[0][image_idx])
-                        # print(current_subsection.shape)
                         
                         if specified_tiles[0][image_idx] == hash(str(current_subsection)): #compare image with current subsection
                             print("match: ", image_idx)
                             specified_tiles_idx = specified_tiles[1][image_idx] # get matching manually set tile number
                             print(climage.convert_array(cv.cvtColor(current_subsection, cv.COLOR_BGR2RGB), is_unicode=True) )
-                            specified_earlier = True
-                            # print("===============")
-                        else:
-                            # print("no maatch")
-                            pass
-                    
+                            specified_earlier = True                    
 
                     if specified_earlier:
                         print("specified earlier")
@@ -216,7 +180,6 @@ class TileRulesDetector:
                                 specified_tiles[1].append(self.add_new_tile(current_subsection, tile_folder))
 
                     elif skip_section==True:
-                        print("skip section")
                         already_in_st = False
                         for image_idx in range(len(specified_tiles[0])):
                             if specified_tiles[0][image_idx] == hash(str(current_subsection)):
@@ -228,14 +191,10 @@ class TileRulesDetector:
                         if already_in_st:
                             section_numbered[y][x] = specified_tiles_idx
 
-                    else:
-                        print("\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/")
-
-        # print(unknown_imgs)
         return section_numbered
 
-    def add_sect_to_dict(self, section_numbered: np.array, neighbourdict: dict) -> None:
 
+    def add_sect_to_dict(self, section_numbered: np.array, neighbourdict: dict) -> None:
         for row in range(section_numbered.shape[0]):
             for col in range(section_numbered.shape[1]):
                 if section_numbered[row][col] == -1:
@@ -251,7 +210,7 @@ class TileRulesDetector:
                     # add area[row][col-1] (right)
                     neighbourdict[selfTile]["right"].add(str(section_numbered[row][col+1]))
                 if row+1 < section_numbered.shape[0] and section_numbered[row+1][col] != -1:
-                    # add area[row-1][col] (down)
+                    # add area[row+1][col] (down)
                     neighbourdict[selfTile]["down"].add(str(section_numbered[row+1][col]))
                 if col-1 > 0 and section_numbered[row][col-1] != -1:
                     # add area[row][col-1] (left)
@@ -269,19 +228,21 @@ class TileRulesDetector:
         tileset, tile_size = load_tile_imgs(self.tile_folder)
         world = load_world_tileset(self.world_name)
 
-        neighbourdict = {} # Tile
+        neighbourdict = {}
 
         world_sections = self.split_sections(world, tile_size)
         sec = 0
         
         os.makedirs(self.sections_folder, exist_ok=True)
         for s in world_sections:
-            cv.imwrite("{w}/section_{sec}.png".format(w=self.sections_folder, sec=sec),s)
+            cv.imwrite("{w}/section_{sec}.png".format(w=self.sections_folder, sec=sec), s)
             sec += 1
 
         neighbourdict = {}
-        specified_tiles = [[], #image data
-                            []] #tile_nr
+        specified_tiles = [
+            [], #image data to match future occurences
+            []  #tile_nr
+        ]
 
         print("Matching tiles in each world section...")
         n_sections_done = 0
@@ -293,6 +254,7 @@ class TileRulesDetector:
 
             section_numbered = self.build_section_ids(section, tileset, tile_size, specified_tiles, self.tile_folder)
             self.add_sect_to_dict(section_numbered, neighbourdict)
+            
         #convert sets to lists for json dumping
         for tile in neighbourdict.keys():
             for direction in neighbourdict[tile].keys():

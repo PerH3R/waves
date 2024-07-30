@@ -59,20 +59,12 @@ class TileExtractor:
     # Using these contours, we cut out each tile and save it as a
     # separate image. Note that this only works if the tileset does
     # not contain the color of the mask itself, although we think
-    # this is safe to assume.
+    # this is safe to assume. A more intelligent detection method is TODO.
     # The grid also needs to go around the border of the whole image.
     # We use the top left pixel to detect the color of the mask.
     def separate_grid(self, tileset: np.array, output_path: str, update_callback: callable) -> None:
         # Detect grid color. Legacy, but working: use the pixel at (0,0) to determine the grid color.
         gridcolor = tileset[0,0]
-
-        # # Detect grid color. Experimental, not working well yet: use the most-occurring color to determine the grid color.
-        # flattened_tileset = tileset.reshape(-1, 3)
-
-        # unique_color, counts = np.unique(flattened_tileset, axis=0, return_counts=True)
-        # max_count_index = np.argmax(counts)
-
-        # gridcolor = unique_color[max_count_index]
 
         # Create the mask.
         mask = np.all(tileset == gridcolor, axis=-1)
@@ -80,14 +72,13 @@ class TileExtractor:
         color_mask = mask.astype(np.uint8)
         color_mask *= 255
 
-        # Save mask to file to inspect TODO: doesn't work now anymore with new filename conventions
-        # makedirs("./masks", exist_ok=True)
-        # cv.imwrite("./masks/{f}_mask.png".format(f=output_path), color_mask)
-
         # Detect contours
         contours, hierarchy = cv.findContours(image=color_mask, mode=cv.RETR_TREE, method=cv.CHAIN_APPROX_SIMPLE)
 
-        # First pass: check most common area
+        # Determine the standard area: the most-occurring area of tiles.
+        # By area we mean the dimension in pixels that occurs the most,
+        # and therefore is the dimension of the tiles.
+        # We discard countours with other dimensions, as they will not fit.
         area_dict = {}
         for c in contours:
             area = cv.contourArea(c)
@@ -96,8 +87,6 @@ class TileExtractor:
             else:
                 area_dict[area] += 1
 
-        # Determine the standard area: the most-occurring area of tiles.
-        # We discard tiles with other dimensions, as they will not fit.
         standard_area = max(zip(area_dict.values(), area_dict.keys()))[1]
 
         tiles_list = []
@@ -107,11 +96,12 @@ class TileExtractor:
 
         # For all contours, cut out tile
         for c in tqdm(contours):
-            # Progress report
+            # Progress report (for the UI)
             n_contours_done += 1
             self.progress = round(100 * (n_contours_done / len(contours)))
             update_callback(self.progress)
 
+            # Check if tile is a square. If not, we skip the tile.
             maxX, maxY = -1, -1
             minX = tileset.shape[:2][1]
             minY = tileset.shape[:2][0]
@@ -126,12 +116,12 @@ class TileExtractor:
                 if coord[1] < minY: #y coord
                     minY = coord[1]
 
-            # Check if tile is a square. If not, we skip the tile.
             if maxX - minX != maxY - minY:
                 continue
 
             # If area of contour does not match standard area, we skip this tile.
-            # We may lose some tiles, bat that's a sacrifice we're willing to make. Tey would probably not fit with the
+            # We may lose some tiles with a non-standard area, but that's a
+            # sacrifice we're willing to make. They would probably not fit with the
             # other tiles anyway.
             if cv.contourArea(c) != standard_area:
                 continue
@@ -140,7 +130,6 @@ class TileExtractor:
 
             # Hash the tile to ensure we only save unique tiles
             self.add_tile(box_image, tiles_list, tiles_hash)
-        
         
         self.write_tiles(output_path, tiles_list)
 
@@ -156,7 +145,7 @@ class TileExtractor:
         tilesetY_size = tileset.shape[:2][0]
         tiles_list = []
         tiles_hash = set()
-        print(tilesetX_size, tilesetY_size)
+
         for x in range(grid_offset_x, tilesetX_size, tile_size+grid_size):
             for y in range(grid_offset_y, tilesetY_size, tile_size+grid_size):
                 box_image = tileset[y : y+tile_size, x : x+tile_size]
@@ -165,11 +154,9 @@ class TileExtractor:
         self.write_tiles(output_path, tiles_list)
         
 
-
     def run(self, update_callback: callable) -> None:
         self.is_running = True
-
-        #load tileset
+        
         tileset = load_world_tileset(self.filename_path)
 
         typer.echo(f"Filename path: {self.filename_path}")
